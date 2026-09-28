@@ -14,7 +14,7 @@
   color-scheme:light;
   --bg:#F2F3F0; --surface:#FFFFFF; --ink:#1B2220; --muted:#66706C; --line:#DCE0DC;
   --field:#F7F8F6; --accent:#1E6B4F; --accent-ink:#FFFFFF; --accent-soft:#E3EFE9;
-  --c-chofer:#3F6FA8; --c-gasoil:#C98A1A; --c-otros:#8A8F8C; --c-gan:#1E6B4F;
+  --c-chofer:#3F6FA8; --c-gasoil:#B5770C; --c-otros:#8E5BA8; --c-gan:#23855A;
   --neg:#B23A2E; --neg-soft:#F8E6E3; --warn:#8A5A00; --warn-soft:#FBF1DC;
   --display:"Archivo",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
 }
@@ -91,7 +91,7 @@ a:focus-visible,.btn:focus-visible,input:focus-visible,textarea:focus-visible,.d
 /* Resultados */
 .total{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
 .total .v{font:500 28px var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.bar{display:flex;height:12px;border-radius:3px;overflow:hidden;margin:14px 0 14px;background:var(--line)}
+.bar{display:flex;gap:2px;height:12px;border-radius:3px;overflow:hidden;margin:14px 0 14px;background:var(--surface)}
 .bar i{display:block;height:100%;transition:width .3s ease}
 @media (prefers-reduced-motion:reduce){.bar i{transition:none}}
 .row{display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line)}
@@ -174,6 +174,50 @@ dl.kv dd{text-align:right;font:500 14px var(--mono);overflow-wrap:anywhere;font-
 dl.kv dd.txt{font-family:var(--body);font-weight:400;font-size:14px}
 dl.kv > :nth-last-child(-n+2){border-bottom:0}
 .notes{white-space:pre-wrap;font-size:14px;margin:0}
+
+
+/* Resumen mensual */
+.rhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.rhead h2{font-family:var(--display);font-size:22px;margin:0}
+.monthnav{display:flex;align-items:center;gap:6px}
+.monthnav .btn{padding:8px 11px}
+.monthnav select{font:500 14px var(--body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-width:0}
+.hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.hero .panel{padding:14px}
+.hero .k{font-size:12.5px;color:var(--muted)}
+.hero .v{font:500 clamp(16px,2.4vw,22px) var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;margin:2px 0}
+.hero .v.gan{color:var(--c-gan)} .hero .v.neg{color:var(--neg)}
+.delta{font-size:12px;color:var(--muted)}
+.delta.up{color:var(--accent)} .delta.down{color:var(--neg)}
+.minis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.minis .kpi{background:var(--surface)}
+@media (max-width:860px){.hero{grid-template-columns:repeat(2,minmax(0,1fr))}.minis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:480px){.minis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);gap:16px;align-items:start;margin-bottom:16px}
+@media (max-width:860px){.rgrid{grid-template-columns:1fr}}
+.insights{margin:0;padding-left:18px;display:grid;gap:8px;font-size:14px;max-width:65ch}
+.insights b{font-weight:500}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.dist .row .amt{font-size:14px}
+.chartwrap{position:relative}
+.chartwrap svg{display:block;width:100%;height:auto;overflow:visible}
+.chartwrap .axis{font:400 11px var(--mono);fill:var(--muted)}
+.chartwrap .grid{stroke:var(--line);stroke-width:1}
+.chartwrap .hit{fill:transparent;cursor:pointer}
+.chartwrap .hit:hover,.chartwrap .hit.on{fill:rgba(27,34,32,.05)}
+.tip{position:absolute;z-index:4;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  box-shadow:0 8px 24px rgba(27,34,32,.12);font-size:12.5px;min-width:200px;max-width:260px}
+.tip.pinned{pointer-events:auto}
+.tip b{display:block;font-size:13.5px;margin-bottom:6px;font-weight:500}
+.tip .tr{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.tip .tr span:first-child{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.tip .tr i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.tip .tr span:last-child{font-family:var(--mono)}
+.tip .tr.tot{border-top:1px solid var(--line);margin-top:4px;padding-top:4px}
+.tip a{display:inline-block;margin-top:6px;color:var(--accent);font-weight:500}
+.chartnote{font-size:12px;color:var(--muted);margin:6px 0 0}
 
 /* Login y avisos */
 .login{max-width:360px;margin:12vh auto 0}
@@ -315,7 +359,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     </div>
     <div class="listhead">
       <h2>Historial</h2>
-      <a class="btn" id="btn-export-todos" href="/api/viajes/excel">Exportar todos a Excel</a>
+      <div class="actions"><a class="btn" id="btn-export-todos" href="/api/viajes/excel">Exportar todos a Excel</a><a class="btn primary" id="btn-resumen" href="#resumen">Resumen mensual</a></div>
     </div>
     <div class="list" id="lista"><div class="loading">Cargando viajes…</div></div>
   </section>
@@ -324,6 +368,23 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
   <section id="v-detalle" hidden>
     <a class="back" href="#viajes">← Volver a viajes</a>
     <div id="detalle-body"><div class="loading">Cargando…</div></div>
+  </section>
+
+  <!-- ============ RESUMEN MENSUAL ============ -->
+  <section id="v-resumen" hidden>
+    <a class="back" href="#viajes">← Volver a viajes</a>
+    <div class="rhead">
+      <h2 id="r-titulo">Resumen mensual</h2>
+      <div class="actions">
+        <div class="monthnav">
+          <button class="btn" type="button" id="m-prev" aria-label="Mes anterior">‹</button>
+          <select id="m-sel" aria-label="Mes"></select>
+          <button class="btn" type="button" id="m-next" aria-label="Mes siguiente">›</button>
+        </div>
+        <a class="btn primary" id="r-export" href="#">Exportar a Excel</a>
+      </div>
+    </div>
+    <div id="resumen-body"><div class="loading">Cargando…</div></div>
   </section>
 </div>
 
@@ -408,10 +469,9 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     setT("r-gan",money(r.ganancia)); setT("save-gan",money(r.ganancia));
     $("net").classList.toggle("loss",r.ganancia<0);
     var base=Math.max(T,r.total_gastos)||1;
-    $("b-chofer").style.width=(r.pago_chofer/base*100)+"%";
-    $("b-gasoil").style.width=(r.costo_gasoil/base*100)+"%";
-    $("b-otros").style.width=(v.otros_gastos/base*100)+"%";
-    $("b-gan").style.width=(Math.max(r.ganancia,0)/base*100)+"%";
+    [["b-chofer",r.pago_chofer],["b-gasoil",r.costo_gasoil],["b-otros",v.otros_gastos],["b-gan",Math.max(r.ganancia,0)]].forEach(function(b){
+      var e=$(b[0]); e.style.width=(b[1]/base*100)+"%"; e.style.display=b[1]>0?"":"none";
+    });
     kpi("k-margen", T?pct(r.ganancia/T):null, "—");
     kpi("k-gtn", v.toneladas>0?money(r.ganancia/v.toneladas):null, "Cargá toneladas");
     kpi("k-ctn", v.toneladas>0?money(r.costo_gasoil/v.toneladas):null, "Cargá toneladas");
@@ -510,7 +570,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     cargarViajes().then(function(l){
       var fact=0, gan=0; l.forEach(function(v){ fact+=v.total; gan+=v.ganancia; });
       setT("s-n", String(l.length)); setT("s-fact", money(fact)); setT("s-gan", money(gan));
-      $("btn-export-todos").hidden = !l.length;
+      $("btn-export-todos").hidden = !l.length; $("btn-resumen").hidden = !l.length;
       if(!l.length){
         cont.innerHTML='<div class="empty"><p>Todavía no hay viajes guardados.</p><a class="btn primary" href="#calculadora">Cargar un viaje</a></div>';
         return;
@@ -550,7 +610,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
         '</div><div class="stack">'+
           '<div class="panel"><p class="label-sm">Resultado</p>'+
             '<div class="total"><span>Total factura</span><span class="v">'+money(T)+'</span></div>'+
-            '<div class="bar" aria-hidden="true"><i style="width:'+(v.pago_chofer/base*100)+'%;background:var(--c-chofer)"></i><i style="width:'+(v.costo_gasoil/base*100)+'%;background:var(--c-gasoil)"></i><i style="width:'+(v.otros_gastos/base*100)+'%;background:var(--c-otros)"></i><i style="width:'+(Math.max(v.ganancia,0)/base*100)+'%;background:var(--c-gan)"></i></div>'+
+            '<div class="bar" aria-hidden="true">'+[[v.pago_chofer,"var(--c-chofer)"],[v.costo_gasoil,"var(--c-gasoil)"],[v.otros_gastos,"var(--c-otros)"],[Math.max(v.ganancia,0),"var(--c-gan)"]].map(function(b){ return b[0]>0?'<i style="width:'+(b[0]/base*100)+'%;background:'+b[1]+'"></i>':''; }).join("")+'</div>'+
             kv([["Pago al chofer"+sh(v.pago_chofer),money(v.pago_chofer)],["Combustible"+sh(v.costo_gasoil),money(v.costo_gasoil)],["Otros gastos"+sh(v.otros_gastos),money(v.otros_gastos)],["Total gastos",money(v.total_gastos)]])+
             '<div class="net'+(v.ganancia<0?' loss':'')+'"><span class="t">Ganancia neta</span><span class="v">'+money(v.ganancia)+'</span></div></div>'+
           '<div class="panel"><p class="label-sm">Indicadores</p>'+kv([
@@ -571,10 +631,217 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     });
   }
 
+
+  /* ---------- Resumen mensual ---------- */
+  var fC = new Intl.NumberFormat("es-AR",{notation:"compact",maximumFractionDigits:1});
+  var SERIES = [["pago_chofer","Chofer","var(--c-chofer)"],["costo_gasoil","Combustible","var(--c-gasoil)"],["otros_gastos","Otros gastos","var(--c-otros)"],["ganancia","Ganancia","var(--c-gan)"]];
+  var resumenActual = null;
+
+  function variacion(act, prev){
+    if(prev==null || act==null || !prev) return null;
+    return (act-prev)/Math.abs(prev);
+  }
+  function deltaHtml(act, prev, nombreAnt, bueno){
+    var d=variacion(act,prev);
+    if(d==null) return '<span class="delta">Sin datos del mes anterior</span>';
+    var cls = bueno ? (d>=0?"up":"down") : "";
+    return '<span class="delta '+cls+'">'+(d>=0?"▲ ":"▼ ")+fP.format(Math.abs(d)*100)+' % vs '+esc(nombreAnt.split(" ")[0].toLowerCase())+'</span>';
+  }
+
+  function renderResumen(mes){
+    var body=$("resumen-body");
+    body.innerHTML='<div class="loading">Cargando…</div>';
+    api("/api/resumen"+(mes?"?mes="+mes:"")).then(function(r){
+      resumenActual=r;
+      var sel=$("m-sel");
+      sel.innerHTML=r.meses.map(function(m){ return '<option value="'+m.mes+'"'+(m.mes===r.mes?" selected":"")+'>'+esc(m.nombre)+'</option>'; }).join("");
+      var i=r.meses.findIndex(function(m){ return m.mes===r.mes; });
+      $("m-prev").disabled = i<0 || i>=r.meses.length-1;   // lista ordenada del más nuevo al más viejo
+      $("m-next").disabled = i<=0;
+      $("r-titulo").textContent = r.mes ? "Resumen de "+r.nombre.toLowerCase() : "Resumen mensual";
+      $("r-export").hidden = !r.viajes.length;
+      $("r-export").href = r.mes ? "/api/resumen/excel?mes="+r.mes : "#";
+      if(!r.viajes.length){
+        body.innerHTML='<div class="panel empty"><p>'+(r.meses.length?"No hay viajes en ese mes.":"Todavía no hay viajes guardados.")+'</p><a class="btn primary" href="#calculadora">Cargar un viaje</a></div>';
+        return;
+      }
+      var t=r.totales, a=r.anterior?r.anterior.totales:null, an=r.anterior?r.anterior.nombre:"";
+      var A=function(k){ return a?a[k]:null; };
+      var hero=[
+        ["Total facturado", money(t.total), deltaHtml(t.total,A("total"),an,true), ""],
+        ["Ganancia neta", money(t.ganancia), (t.margen!=null?'<div class="delta">Margen '+pct(t.margen)+'</div>':'')+deltaHtml(t.ganancia,A("ganancia"),an,true), t.ganancia<0?"neg":"gan"],
+        ["Se llevó el chofer", money(t.pago_chofer), deltaHtml(t.pago_chofer,A("pago_chofer"),an,false), ""],
+        ["Km recorridos", t.km?fN.format(t.km)+" km":"—", t.km?deltaHtml(t.km,A("km"),an,false):'<span class="delta">Cargá los km en cada viaje</span>', ""]
+      ];
+      var na=function(v,f){ return v==null?'<div class="v na">—</div>':'<div class="v">'+f(v)+'</div>'; };
+      var minis=[
+        ["Viajes", t.viajes, function(v){return String(v);}],
+        ["Toneladas", t.toneladas, function(v){return fN.format(v)+" tn";}],
+        ["Combustible", t.costo_gasoil, money],
+        ["Litros de gasoil", t.litros, function(v){return fN.format(v)+" L";}],
+        ["Otros gastos", t.otros_gastos, money],
+        ["Ganancia por viaje", t.ganancia_por_viaje, money],
+        ["Ganancia por tn", t.ganancia_tn, money],
+        ["Consumo", t.consumo_100km, function(v){return fN.format(v)+" L/100km";}],
+        ["Ganancia por km", t.ganancia_km, money],
+        ["Gasoil promedio", t.precio_gasoil_prom, function(v){return money(v)+"/L";}]
+      ];
+      body.innerHTML=
+        '<div class="hero">'+hero.map(function(h){ return '<div class="panel"><div class="k">'+h[0]+'</div><div class="v '+h[3]+'">'+h[1]+'</div>'+h[2]+'</div>'; }).join("")+'</div>'+
+        '<div class="minis">'+minis.map(function(m){ return '<div class="kpi"><div class="k">'+m[0]+'</div>'+na(m[1],m[2])+'</div>'; }).join("")+'</div>'+
+        '<div class="rgrid">'+
+          '<div class="stack">'+
+            '<div class="panel dist"><p class="label-sm">¿A dónde va lo facturado?</p>'+distribucion(t)+'</div>'+
+            '<div class="panel"><p class="label-sm">Lectura del mes</p><ul class="insights">'+lectura(r).map(function(x){return "<li>"+x+"</li>";}).join("")+'</ul></div>'+
+          '</div>'+
+          '<div class="panel"><p class="label-sm">Viajes del mes · facturado y cómo se reparte</p>'+
+            '<div class="legend">'+SERIES.map(function(sr){ return '<span><i style="background:'+sr[2]+'"></i>'+sr[1]+'</span>'; }).join("")+'</div>'+
+            '<div class="chartwrap" id="chart"></div>'+
+            '<p class="chartnote">Cada barra es un viaje: su altura es lo facturado. Tocá una barra para ver el detalle.</p></div>'+
+        '</div>'+
+        '<div class="listhead"><h2>Viajes de '+esc(r.nombre.toLowerCase())+'</h2></div>'+
+        '<div class="list">'+filasViajes(r.viajes)+'</div>';
+      dibujarBarras(r.viajes);
+    }).catch(function(e){ body.innerHTML='<div class="empty"><p>'+esc(e.message)+'</p></div>'; });
+  }
+
+  function distribucion(t){
+    var T=t.total||1, gan=Math.max(t.ganancia,0);
+    var bar='<div class="bar" style="height:16px">'+SERIES.map(function(sr){
+      var v= sr[0]==="ganancia"?gan:t[sr[0]]; return v>0?'<i style="width:'+(v/Math.max(T,t.total_gastos)*100)+'%;background:'+sr[2]+'"></i>':"";
+    }).join("")+'</div>';
+    var filas=SERIES.map(function(sr){
+      var v=t[sr[0]];
+      return '<div class="row"><span class="dot" style="background:'+sr[2]+'"></span><span>'+sr[1]+'</span><span class="pct">'+(t.total?pct(v/t.total):"")+'</span><span class="amt">'+money(v)+'</span></div>';
+    }).join("");
+    return bar+'<div>'+filas+'</div>';
+  }
+
+  function lectura(r){
+    var t=r.totales, a=r.anterior?r.anterior.totales:null, out=[];
+    out.push('Se hicieron <b>'+t.viajes+' '+(t.viajes===1?"viaje":"viajes")+'</b> y se transportaron <b>'+fN.format(t.toneladas)+' tn</b>, a un promedio de '+money(t.precio_tn_prom||0)+' por tonelada.');
+    if(t.total>0){
+      var c=function(x){ return money(x/t.total*100).replace(",00",""); };
+      out.push('De cada $ 100 facturados, <b>'+c(t.pago_chofer)+'</b> fueron al chofer, <b>'+c(t.costo_gasoil)+'</b> al gasoil'+(t.otros_gastos>0?', '+c(t.otros_gastos)+' a otros gastos':'')+' y quedaron <b>'+c(t.ganancia)+'</b> de ganancia.');
+    }
+    if(a){
+      var dg=variacion(t.ganancia,a.ganancia);
+      if(dg!=null) out.push('La ganancia <b>'+(dg>=0?"subió":"bajó")+' '+fP.format(Math.abs(dg)*100)+' %</b> respecto de '+esc(r.anterior.nombre.toLowerCase())+' ('+money(a.ganancia)+' → '+money(t.ganancia)+').');
+      if(t.pct_gasoil!=null && a.pct_gasoil!=null && Math.abs(t.pct_gasoil-a.pct_gasoil)>=0.01)
+        out.push('El gasoil pesó '+pct(t.pct_gasoil)+' de lo facturado, '+(t.pct_gasoil>a.pct_gasoil?"más":"menos")+' que en '+esc(r.anterior.nombre.split(" ")[0].toLowerCase())+' ('+pct(a.pct_gasoil)+').');
+    }
+    if(r.viajes.length>=2){
+      var best=r.viajes.reduce(function(b,v){ return v.ganancia>b.ganancia?v:b; });
+      out.push('El viaje más rentable fue el del <b>'+fecha(best.fecha).slice(0,5)+'</b>'+(best.cliente?' para '+esc(best.cliente):'')+': '+money(best.ganancia)+' de ganancia ('+(best.total?pct(best.ganancia/best.total):"—")+' de margen).');
+      var neg=r.viajes.filter(function(v){ return v.ganancia<0; }).length;
+      if(neg) out.push('<b>'+neg+' '+(neg===1?"viaje dio":"viajes dieron")+' pérdida.</b> Revisalos en la lista de abajo.');
+    }
+    if(t.consumo_100km!=null) out.push('Consumo promedio del camión: <b>'+fN.format(t.consumo_100km)+' L cada 100 km</b>'+(t.viajes_con_km<t.viajes?' (con '+t.viajes_con_km+' de '+t.viajes+' viajes que tienen km cargados)':'')+'.');
+    else out.push('Cargá los km en cada viaje para ver el consumo y la ganancia por km.');
+    return out;
+  }
+
+  function filasViajes(l){
+    return '<div class="trip head"><span>Fecha</span><span>Cliente</span><span class="num">Toneladas</span><span class="num">Facturado</span><span class="num">Ganancia</span><span></span></div>'+
+      l.map(function(v){
+        return '<a class="trip" href="#viaje/'+v.id+'">'+
+          '<span class="date">'+fecha(v.fecha)+'</span>'+
+          '<span class="who"><b>'+esc(v.cliente||"Sin cliente")+'</b><small>'+esc(v.detalle||v.factura_nro||"")+'</small></span>'+
+          '<span class="num tn">'+fN.format(v.toneladas)+' tn</span>'+
+          '<span class="num tot">'+money(v.total)+'</span>'+
+          '<span class="num '+(v.ganancia<0?"neg":"gan")+'"><span class="m">Ganancia </span>'+money(v.ganancia)+'</span>'+
+          '<span class="chev" aria-hidden="true">›</span></a>';
+      }).join("");
+  }
+
+  function niceMax(v){
+    if(v<=0) return 1;
+    var e=Math.pow(10,Math.floor(Math.log10(v))), f=v/e;
+    var step=(f<=1.5?0.25:f<=3?0.5:f<=6?1:2)*e;
+    return {max:Math.ceil(v/step)*step, step:step};
+  }
+  function topRounded(x,y,w,h,r){
+    r=Math.min(r,w/2,h);
+    return "M"+x+","+(y+h)+"V"+(y+r)+"Q"+x+","+y+" "+(x+r)+","+y+"H"+(x+w-r)+"Q"+(x+w)+","+y+" "+(x+w)+","+(y+r)+"V"+(y+h)+"Z";
+  }
+
+  function dibujarBarras(l){
+    var wrap=$("chart"); if(!wrap) return;
+    var W=Math.max(wrap.clientWidth,280), H=W<500?220:260, ml=52, mr=8, mt=10, mb=26;
+    var pw=W-ml-mr, ph=H-mt-mb;
+    var maxV=Math.max.apply(null,l.map(function(v){ return Math.max(v.total,v.total_gastos); }));
+    var nm=niceMax(maxV), y=function(v){ return mt+ph-(v/nm.max)*ph; };
+    var band=pw/l.length, bw=Math.max(6,Math.min(40,band*0.62));
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Facturado por viaje en el mes, dividido en chofer, combustible, otros gastos y ganancia">';
+    for(var g=0; g<=nm.max+1e-9; g+=nm.step){
+      svg+='<line class="grid" x1="'+ml+'" x2="'+(W-mr)+'" y1="'+y(g)+'" y2="'+y(g)+'"/>'+
+           '<text class="axis" x="'+(ml-8)+'" y="'+(y(g)+4)+'" text-anchor="end">'+(g?"$ "+fC.format(g):"0")+'</text>';
+    }
+    var cada=Math.ceil(l.length/Math.floor(pw/44));   // evita que se pisen las fechas
+    l.forEach(function(v,i){
+      var cx=ml+band*i+band/2, x=cx-bw/2, base=mt+ph;
+      var vals=SERIES.map(function(sr){ return sr[0]==="ganancia"?Math.max(v.ganancia,0):v[sr[0]]; });
+      var visibles=vals.map(function(val,k){ return val>0?k:-1; }).filter(function(k){ return k>=0; });
+      var top=visibles[visibles.length-1];
+      vals.forEach(function(val,k){
+        if(!(val>0)) return;
+        var h=(val/nm.max)*ph, yy=base-h;
+        var gap=(k===top)?0:2;          // 2px de separación entre segmentos
+        if(k===top) svg+='<path d="'+topRounded(x,yy,bw,Math.max(h,1),4)+'" fill="'+SERIES[k][2]+'"/>';
+        else svg+='<rect x="'+x+'" y="'+(yy+gap)+'" width="'+bw+'" height="'+Math.max(h-gap,0.5)+'" fill="'+SERIES[k][2]+'"/>';
+        base=yy;
+      });
+      if(v.ganancia<0) svg+='<text class="axis" x="'+cx+'" y="'+(base-4)+'" text-anchor="middle" style="fill:var(--neg)">pérdida</text>';
+      if(i%cada===0) svg+='<text class="axis" x="'+cx+'" y="'+(H-8)+'" text-anchor="middle">'+fecha(v.fecha).slice(0,5)+'</text>';
+      svg+='<rect class="hit" data-i="'+i+'" x="'+(ml+band*i)+'" y="'+mt+'" width="'+band+'" height="'+ph+'"/>';
+    });
+    svg+='</svg><div class="tip" id="tip" hidden></div>';
+    wrap.innerHTML=svg;
+
+    var tip=$("tip"), pinned=null;
+    function mostrar(el, pin){
+      var v=l[+el.getAttribute("data-i")];
+      tip.innerHTML='<b>'+fecha(v.fecha)+(v.cliente?' · '+esc(v.cliente):'')+'</b>'+
+        SERIES.map(function(sr){ return '<div class="tr"><span><i style="background:'+sr[2]+'"></i>'+sr[1]+'</span><span>'+money(v[sr[0]])+'</span></div>'; }).join("")+
+        '<div class="tr tot"><span>Facturado</span><span>'+money(v.total)+'</span></div>'+
+        (pin?'<a href="#viaje/'+v.id+'">Ver viaje →</a>':'');
+      tip.hidden=false; tip.classList.toggle("pinned",!!pin);
+      var r=wrap.getBoundingClientRect(), b=el.getBoundingClientRect();
+      var left=b.left-r.left+b.width/2-tip.offsetWidth/2;
+      tip.style.left=Math.max(0,Math.min(left, r.width-tip.offsetWidth))+"px";
+      tip.style.top=Math.max(0, y(Math.max(v.total,v.total_gastos))-tip.offsetHeight-10)+"px";
+    }
+    wrap.querySelectorAll(".hit").forEach(function(el){
+      el.addEventListener("mouseenter",function(){ if(!pinned) mostrar(el,false); });
+      el.addEventListener("mouseleave",function(){ if(!pinned) tip.hidden=true; });
+      el.addEventListener("click",function(e){
+        e.stopPropagation();
+        if(pinned) pinned.classList.remove("on");
+        if(pinned===el){ pinned=null; tip.hidden=true; return; }
+        pinned=el; el.classList.add("on"); mostrar(el,true);
+      });
+    });
+    wrap.addEventListener("click",function(){ if(pinned){ pinned.classList.remove("on"); pinned=null; tip.hidden=true; } });
+  }
+
+  var rt;
+  window.addEventListener("resize",function(){
+    clearTimeout(rt); rt=setTimeout(function(){ if(!$("v-resumen").hidden && resumenActual) dibujarBarras(resumenActual.viajes); },150);
+  });
+  $("m-sel").addEventListener("change",function(){ location.hash="#resumen/"+this.value; });
+  $("m-prev").addEventListener("click",function(){ moverMes(1); });
+  $("m-next").addEventListener("click",function(){ moverMes(-1); });
+  function moverMes(d){
+    if(!resumenActual) return;
+    var i=resumenActual.meses.findIndex(function(m){ return m.mes===resumenActual.mes; });
+    var m=resumenActual.meses[i+d]; if(m) location.hash="#resumen/"+m.mes;
+  }
+
   /* ---------- Navegación ---------- */
   function route(){
-    var h=location.hash.replace(/^#/,""), m=h.match(/^viaje\/(\d+)$/);
-    var vista = m ? "detalle" : (h==="viajes" ? "viajes" : "calc");
+    var h=location.hash.replace(/^#/,""), m=h.match(/^viaje\/(\d+)$/), rm=h.match(/^resumen(?:\/(\d{4}-\d{2}))?$/);
+    var vista = m ? "detalle" : rm ? "resumen" : (h==="viajes" ? "viajes" : "calc");
+    $("v-resumen").hidden = vista!=="resumen";
     $("v-calc").hidden = vista!=="calc";
     $("v-viajes").hidden = vista!=="viajes";
     $("v-detalle").hidden = vista!=="detalle";
@@ -582,6 +849,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     $("tab-viajes").setAttribute("aria-current", vista!=="calc"?"page":"false");
     if(vista==="viajes") renderViajes();
     if(vista==="detalle") renderDetalle(m[1]);
+    if(vista==="resumen") renderResumen(rm[1]);
     if(vista!=="calc") window.scrollTo(0,0);
   }
 

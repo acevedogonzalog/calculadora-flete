@@ -14,8 +14,9 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
 from . import db
-from .excel import excel_todos, excel_viaje
+from .excel import excel_resumen, excel_todos, excel_viaje
 from .factura import leer_factura
+from .resumen import resumen
 
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 MAX_PDF = 10 * 1024 * 1024  # 10 MB
@@ -126,6 +127,27 @@ def guardar_viaje(v: ViajeIn):
 def exportar_todos():
     contenido = excel_todos(db.listar())
     return _xlsx(contenido, f"viajes-{date.today().isoformat()}.xlsx")
+
+
+# ---------- Resumen mensual ----------
+
+def _mes_valido(mes: str | None) -> str | None:
+    if mes and not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", mes):
+        raise HTTPException(400, "Mes inválido. Usá el formato AAAA-MM.")
+    return mes
+
+
+@app.get("/api/resumen")
+def ver_resumen(mes: str | None = None):
+    return resumen(db.listar(), _mes_valido(mes))
+
+
+@app.get("/api/resumen/excel")
+def exportar_resumen(mes: str):
+    r = resumen(db.listar(), _mes_valido(mes))
+    if not r["viajes"]:
+        raise HTTPException(404, "No hay viajes en ese mes.")
+    return _xlsx(excel_resumen(r), f"resumen-{mes}.xlsx")
 
 
 @app.get("/api/viajes/{viaje_id}")

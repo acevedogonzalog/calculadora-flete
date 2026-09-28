@@ -5,7 +5,8 @@ Aplicación web para viajes de camión de carga. Funciona en la PC y en el celul
 - **Calculadora**: total de la factura, pago al chofer (porcentaje sobre el total), combustible, otros gastos, ganancia neta e indicadores por tonelada y por km.
 - **Carga de factura**: se sube el PDF de la factura electrónica de ARCA y se completan solos la fecha, el número, el cliente, el detalle, el remito, las toneladas y el precio.
 - **Viajes**: el botón *Guardar viaje* registra el viaje. En la sección *Viajes* está el historial con totales; al tocar un viaje se ve el detalle y se puede exportar a Excel o eliminar.
-- **Exportar**: Excel de un viaje con todo el detalle, o Excel con todos los viajes.
+- **Resumen mensual**: dentro de *Viajes*, toma los viajes de un mes calendario (del 1 al último día, según la fecha de la factura). Muestra totales, comparación con el mes anterior, una lectura automática del mes y gráficos. Se exporta a Excel con los totales, indicadores, gráficos y la lista de viajes del mes.
+- **Exportar**: Excel de un viaje con todo el detalle, Excel del resumen mensual o Excel con todos los viajes.
 
 ## Estructura
 
@@ -14,6 +15,7 @@ main.py              Arranque del servidor (usa la variable PORT)
 app/server.py        API (FastAPI) y página
 app/factura.py       Lectura de la factura PDF (pdfplumber)
 app/excel.py         Exportación a Excel (openpyxl)
+app/resumen.py       Cálculos del resumen mensual
 app/db.py            Base de datos (PostgreSQL en Railway, SQLite en la compu)
 public/index.html    Interfaz
 requirements.txt     Librerías de Python

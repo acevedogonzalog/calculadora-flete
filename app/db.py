@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, Date, DateTime, Float, Integer, MetaData, String, Table, Text,
-    create_engine, delete, insert, inspect, select, text, update,
+    create_engine, delete, func, insert, inspect, select, text, update,
 )
 
 
@@ -62,6 +62,19 @@ viajes = Table(
 )
 
 
+# Fotos (o PDF) de remitos: varias por viaje
+remitos = Table(
+    "remitos", metadata,
+    Column("id", Integer, primary_key=True),
+    Column("viaje_id", Integer, nullable=False, index=True),
+    Column("archivo", String(160), nullable=False),
+    Column("miniatura", String(160), default=""),
+    Column("tipo", String(10), default="foto"),
+    Column("nombre", String(200), default=""),
+    Column("creado", DateTime(timezone=True), nullable=False),
+)
+
+
 def init_db() -> None:
     metadata.create_all(engine)
     _migrar()
@@ -94,28 +107,57 @@ def calcular(p: dict) -> dict:
 
 def _fila(r) -> dict:
     d = dict(r._mapping)
-    d["fecha"] = d["fecha"].isoformat() if d.get("fecha") else None
+    if "fecha" in d:
+        d["fecha"] = d["fecha"].isoformat() if d.get("fecha") else None
     d["creado"] = d["creado"].isoformat() if d.get("creado") else None
     return d
 
 
-def crear(datos: dict) -> dict:
+def crear(datos: dict, fotos: list[dict] | None = None) -> dict:
     valores = {**datos, **calcular(datos), "creado": datetime.now(timezone.utc)}
     with engine.begin() as con:
         nuevo_id = con.execute(insert(viajes).values(**valores)).inserted_primary_key[0]
+        for f in fotos or []:
+            con.execute(insert(remitos).values(viaje_id=nuevo_id, creado=datetime.now(timezone.utc), **f))
     return obtener(nuevo_id)
 
 
 def listar() -> list[dict]:
     with engine.connect() as con:
         q = select(viajes).order_by(viajes.c.fecha.desc(), viajes.c.id.desc())
-        return [_fila(r) for r in con.execute(q)]
+        filas = [_fila(r) for r in con.execute(q)]
+        cuentas = dict(con.execute(select(remitos.c.viaje_id, func.count()).group_by(remitos.c.viaje_id)).all())
+    for f in filas:
+        f["remitos_cant"] = cuentas.get(f["id"], 0)
+    return filas
+
+
+def _remitos_de(con, viaje_id: int) -> list[dict]:
+    q = select(remitos).where(remitos.c.viaje_id == viaje_id).order_by(remitos.c.id)
+    return [_fila(r) for r in con.execute(q)]
 
 
 def obtener(viaje_id: int) -> dict | None:
     with engine.connect() as con:
         r = con.execute(select(viajes).where(viajes.c.id == viaje_id)).first()
-        return _fila(r) if r else None
+        if not r:
+            return None
+        v = _fila(r)
+        v["remitos"] = _remitos_de(con, viaje_id)
+        v["remitos_cant"] = len(v["remitos"])
+        return v
+
+
+def agregar_remito(viaje_id: int, foto: dict) -> dict:
+    with engine.begin() as con:
+        con.execute(insert(remitos).values(viaje_id=viaje_id, creado=datetime.now(timezone.utc), **foto))
+    return obtener(viaje_id)
+
+
+def quitar_remito(remito_id: int) -> bool:
+    """Saca la foto del viaje. El archivo queda en el disco como respaldo."""
+    with engine.begin() as con:
+        return con.execute(delete(remitos).where(remitos.c.id == remito_id)).rowcount > 0
 
 
 def asignar_factura(viaje_id: int, archivo: str, nombre: str) -> dict | None:
@@ -127,4 +169,5 @@ def asignar_factura(viaje_id: int, archivo: str, nombre: str) -> dict | None:
 
 def borrar(viaje_id: int) -> bool:
     with engine.begin() as con:
+        con.execute(delete(remitos).where(remitos.c.viaje_id == viaje_id))
         return con.execute(delete(viajes).where(viajes.c.id == viaje_id)).rowcount > 0

@@ -7,6 +7,7 @@ Aplicación web para viajes de camión de carga. Funciona en la PC y en el celul
 - **Viajes**: el botón *Guardar viaje* registra el viaje. En la sección *Viajes* está el historial con totales; al tocar un viaje se ve el detalle y se puede exportar a Excel o eliminar.
 - **Resumen mensual**: dentro de *Viajes*, toma los viajes de un mes calendario (del 1 al último día, según la fecha de la factura). Muestra totales, comparación con el mes anterior, una lectura automática del mes y gráficos. Se exporta a Excel con los totales, indicadores, gráficos y la lista de viajes del mes.
 - **Factura guardada**: el PDF que se sube queda guardado en `/data/facturas` junto con el viaje. En el detalle del viaje está el botón *Ver factura*; a los viajes sin factura se les puede adjuntar el PDF después.
+- **Remitos**: fotos del remito sacadas con el celular (o elegidas de la galería), varias por viaje. Se cargan antes de guardar el viaje o después, desde el detalle. Se guardan en `/data/remitos`, enderezadas y reducidas a 2400 px en JPEG, con miniatura. Acepta JPG, PNG, HEIC (iPhone) y PDF.
 - **Exportar**: Excel de un viaje con todo el detalle, Excel del resumen mensual o Excel con todos los viajes.
 
 ## Estructura
@@ -17,7 +18,7 @@ app/server.py        API (FastAPI) y página
 app/factura.py       Lectura de la factura PDF (pdfplumber)
 app/excel.py         Exportación a Excel (openpyxl)
 app/resumen.py       Cálculos del resumen mensual
-app/almacen.py       Guardado de las facturas PDF en /data/facturas
+app/almacen.py       Guardado de facturas (/data/facturas) y fotos de remitos (/data/remitos)
 app/db.py            Base de datos (PostgreSQL en Railway, SQLite en la compu)
 public/index.html    Interfaz
 requirements.txt     Librerías de Python
@@ -42,9 +43,9 @@ Sin `DATABASE_URL` guarda los viajes en el archivo `viajes.db`.
 |---|---|
 | `DATABASE_URL` | Base PostgreSQL donde se guardan los viajes. Poner `${{Postgres.DATABASE_URL}}`. **Sin esto los viajes se borran en cada despliegue.** |
 | `APP_PASSWORD` | Opcional pero recomendado. Si está definida, la app pide esta clave para entrar. |
-| `FACTURAS_DIR` | Opcional. Carpeta de las facturas; por defecto `/data/facturas`. |
+| `DATA_DIR` | Opcional. Carpeta base de los archivos; por defecto `/data` (facturas en `/data/facturas`, remitos en `/data/remitos`). |
 
-**Volume para las facturas:** en Railway, `Ctrl+K → Create Volume`, elegir el servicio `calculadora-flete` y poner como mount path `/data`. Sin el Volume, los PDF se borran en cada deploy (la app lo avisa en los Deploy Logs).
+**Volume para las facturas:** en Railway, `Ctrl+K → Create Volume`, elegir el servicio `calculadora-flete` y poner como mount path `/data`. Sin el Volume, las facturas y las fotos de remitos se borran en cada deploy (la app lo avisa en los Deploy Logs).
 
 ## Facturas
 

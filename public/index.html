@@ -119,7 +119,8 @@ a:focus-visible,.btn:focus-visible,input:focus-visible,textarea:focus-visible,.d
 .savebar .info{font-size:13px;color:var(--muted);min-width:0}
 .savebar .info b{display:block;font:500 17px var(--mono);color:var(--ink)}
 .savebar .btn{padding:11px 22px;font-size:15px}
-@media (max-width:480px){.savebar{border-radius:10px 10px 0 0;margin-inline:-16px}}
+@media (max-width:480px){.savebar{border-radius:10px 10px 0 0;margin-inline:-16px;gap:8px}.savebar .actions{flex-wrap:nowrap;gap:6px}
+  .savebar .btn{padding:10px 12px;font-size:14px}.savebar .info{font-size:12px;white-space:nowrap}.savebar .info b{font-size:15px}}
 
 /* Viajes */
 .sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
@@ -226,6 +227,22 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
 .facok{color:var(--accent)} .facno{color:var(--muted)}
 .facbox .btn{padding:7px 12px;font-size:13px}
 
+/* Remitos */
+.hint{font-size:13px;color:var(--muted);margin:-4px 0 12px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;margin-bottom:12px}
+.thumbs:empty{display:none}
+.thumb{position:relative;aspect-ratio:3/4;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--field);display:block}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb a{text-decoration:none}
+.thumb .pdfbox{display:grid;place-items:center;height:100%;font:500 13px var(--mono);color:var(--accent)}
+.thumb .x{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(27,34,32,.72);color:#fff;
+  font-size:15px;line-height:26px;text-align:center;cursor:pointer;padding:0}
+.thumb .x.confirm{width:auto;border-radius:13px;padding:0 8px;font-size:11.5px;background:var(--neg)}
+.remrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.remst{font-size:13px;color:var(--muted)}
+.remst.err{color:var(--neg)}
+.fotos{font:500 10px var(--mono);color:var(--c-chofer);border:1px solid var(--c-chofer);border-radius:3px;padding:0 3px;margin-right:2px}
+
 /* Login y avisos */
 .login{max-width:360px;margin:12vh auto 0}
 .login h1{margin-bottom:6px}
@@ -284,6 +301,17 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
             <div class="f"><label for="remito">Remito</label><input id="remito"></div>
           </div>
         </form>
+
+        <div class="panel">
+          <p class="label-sm">Remitos</p>
+          <p class="hint">Sacá una foto del remito con el celular o elegila de la galería. Queda guardada con el viaje.</p>
+          <div class="thumbs" id="rem-thumbs"></div>
+          <div class="remrow">
+            <label class="btn" for="rem-in"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg> Agregar foto de remito</label>
+            <input type="file" id="rem-in" accept="image/*,application/pdf" multiple hidden>
+            <span class="remst" id="rem-status" role="status"></span>
+          </div>
+        </div>
 
         <form class="panel" id="f-num" autocomplete="off" onsubmit="return false">
           <p class="label-sm">Carga</p>
@@ -404,8 +432,8 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
   var NUMS = ["toneladas","precio_tn","pct_chofer","precio_gasoil","litros","km","otros_gastos"];
   var TEXTS = ["fecha","factura_nro","cliente","detalle","remito","notas"];
   var DEF_KEY = "cf-defaults-v1", DRAFT_KEY = "cf-borrador-v1";
-  var EXTRA0 = { cliente_cuit:"", cae:"", factura_archivo:"", factura_nombre:"" };
-  var extra = Object.assign({}, EXTRA0);   // datos de la factura que no se muestran en pantalla
+  function extraVacio(){ return { cliente_cuit:"", cae:"", factura_archivo:"", factura_nombre:"", remitos:[] }; }
+  var extra = extraVacio();   // datos de la factura que no se muestran en pantalla
   var viajesCache = null;
 
   /* ---------- Formatos ---------- */
@@ -507,7 +535,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     NUMS.concat(TEXTS).forEach(function(id){ $(id).value=""; });
     $("pct_chofer").value=d.pct_chofer; $("precio_gasoil").value=d.precio_gasoil; $("otros_gastos").value="0";
     $("fecha").value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
-    extra=Object.assign({}, EXTRA0);
+    extra=extraVacio(); renderRemitosCalc();
     $("pdf-msg").hidden=true; $("drop-t").textContent="Subir factura PDF";
     render();
   }
@@ -526,7 +554,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
       ["factura_nro","cliente","detalle","remito"].forEach(function(k){ if(d[k]) $(k).value=d[k]; });
       if(d.toneladas!=null) $("toneladas").value=toInput(d.toneladas);
       if(d.precio_tn!=null) $("precio_tn").value=toInput(d.precio_tn);
-      extra={cliente_cuit:d.cliente_cuit||"", cae:d.cae||"", factura_archivo:d.factura_archivo||"", factura_nombre:d.factura_nombre||""};
+      Object.assign(extra,{cliente_cuit:d.cliente_cuit||"", cae:d.cae||"", factura_archivo:d.factura_archivo||"", factura_nombre:d.factura_nombre||""});
       $("drop-t").textContent="Factura "+(d.factura_nro||file.name);
       var av=d.avisos||[];
       if(av.length){
@@ -543,6 +571,46 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     }).finally(function(){ $("pdf").value=""; });
   }
 
+  /* ---------- Remitos (fotos) ---------- */
+  function urlRemito(n){ return "/api/remitos/archivo/"+encodeURIComponent(n); }
+  function thumbHtml(r, quitarAttr){
+    var inner = r.tipo==="pdf" || !r.miniatura ? '<span class="pdfbox">PDF</span>' : '<img src="'+urlRemito(r.miniatura)+'" alt="Foto de remito" loading="lazy">';
+    return '<div class="thumb"><a href="'+urlRemito(r.archivo)+'" target="_blank" rel="noopener" style="display:block;height:100%">'+inner+'</a>'+
+           '<button type="button" class="x" '+quitarAttr+' aria-label="Quitar foto">×</button></div>';
+  }
+  function renderRemitosCalc(){
+    var c=$("rem-thumbs"); if(!c) return;
+    c.innerHTML=extra.remitos.map(function(r,i){ return thumbHtml(r,'data-i="'+i+'"'); }).join("");
+    c.querySelectorAll(".x").forEach(function(b){
+      b.addEventListener("click",function(){
+        extra.remitos.splice(+b.getAttribute("data-i"),1); renderRemitosCalc(); guardarBorrador();
+      });
+    });
+  }
+  // Sube las fotos de a una y avisa el progreso
+  function subirFotos(files, url, alTerminar, estado){
+    files=Array.prototype.slice.call(files||[]); if(!files.length) return;
+    var i=0, ok=0, errores=[];
+    function sig(){
+      if(i>=files.length){
+        estado(errores.length? errores.join(" ") : (ok===1?"Foto guardada.":ok+" fotos guardadas."), !!errores.length);
+        alTerminar(); return;
+      }
+      estado("Subiendo "+(i+1)+" de "+files.length+"…");
+      var fd=new FormData(); fd.append("archivo",files[i]);
+      api(url,{method:"POST",body:fd}).then(function(r){ ok++; return r; })
+        .then(function(r){ if(url==="/api/remitos"){ extra.remitos.push(r); renderRemitosCalc(); guardarBorrador(); } })
+        .catch(function(e){ errores.push(files[i].name+": "+e.message); })
+        .finally(function(){ i++; sig(); });
+    }
+    sig();
+  }
+  $("rem-in").addEventListener("change",function(){
+    var st=$("rem-status");
+    subirFotos(this.files,"/api/remitos",function(){ $("rem-in").value=""; },
+      function(t,err){ st.textContent=t; st.classList.toggle("err",!!err); });
+  });
+
   /* ---------- Guardar ---------- */
   function guardar(){
     var v=leer();
@@ -551,7 +619,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     var body={
       fecha:$("fecha").value||null, factura_nro:$("factura_nro").value.trim(), cliente:$("cliente").value.trim(),
       detalle:$("detalle").value.trim(), remito:$("remito").value.trim(), notas:$("notas").value.trim(),
-      cliente_cuit:extra.cliente_cuit, cae:extra.cae, factura_archivo:extra.factura_archivo||"", factura_nombre:extra.factura_nombre||"",
+      cliente_cuit:extra.cliente_cuit, cae:extra.cae, factura_archivo:extra.factura_archivo||"", factura_nombre:extra.factura_nombre||"", remitos:extra.remitos,
       toneladas:v.toneladas, precio_tn:v.precio_tn, pct_chofer:v.pct_chofer, precio_gasoil:v.precio_gasoil,
       litros:v.litros, km:v.km, otros_gastos:v.otros_gastos
     };
@@ -587,7 +655,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
         l.map(function(v){
           return '<a class="trip" href="#viaje/'+v.id+'">'+
             '<span class="date">'+fecha(v.fecha)+'</span>'+
-            '<span class="who"><b>'+esc(v.cliente||"Sin cliente")+'</b><small>'+(v.factura_archivo?'<span class="pdf">PDF</span> ':'')+esc(v.detalle||v.factura_nro||"")+'</small></span>'+
+            '<span class="who"><b>'+esc(v.cliente||"Sin cliente")+'</b><small>'+(v.factura_archivo?'<span class="pdf">PDF</span> ':'')+(v.remitos_cant?'<span class="fotos">'+v.remitos_cant+' '+(v.remitos_cant===1?'foto':'fotos')+'</span> ':'')+esc(v.detalle||v.factura_nro||"")+'</small></span>'+
             '<span class="num tn">'+fN.format(v.toneladas)+' tn</span>'+
             '<span class="num tot">'+money(v.total)+'</span>'+
             '<span class="num '+(v.ganancia<0?"neg":"gan")+'"><span class="m">Ganancia </span>'+money(v.ganancia)+'</span>'+
@@ -619,6 +687,11 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
           '<div class="panel"><p class="label-sm">Datos del viaje</p>'+kv([
             ["Toneladas",fN.format(v.toneladas)+" tn"],["Precio por tonelada",money(v.precio_tn)],["Porcentaje chofer",fP.format(v.pct_chofer)+" %"],
             ["Precio gasoil",money(v.precio_gasoil)+" /L"],["Gasoil consumido",fN.format(v.litros)+" L"],["Kilómetros",km?fN.format(v.km)+" km":"—"],["Otros gastos",money(v.otros_gastos)]])+'</div>'+
+          '<div class="panel"><p class="label-sm">Remitos'+(v.remitos.length?' · '+v.remitos.length:'')+'</p>'+
+            (v.remitos.length?'':'<p class="hint">Todavía no hay fotos del remito de este viaje.</p>')+
+            '<div class="thumbs">'+v.remitos.map(function(r){ return thumbHtml(r,'data-rid="'+r.id+'"'); }).join("")+'</div>'+
+            '<div class="remrow"><label class="btn" for="rem-det">'+'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.5"/></svg>'+' Agregar foto de remito</label>'+
+            '<input type="file" id="rem-det" accept="image/*,application/pdf" multiple hidden><span class="remst" id="rem-det-st" role="status"></span></div></div>'+
           (v.notas?'<div class="panel"><p class="label-sm">Notas</p><p class="notes">'+esc(v.notas)+'</p></div>':'')+
         '</div><div class="stack">'+
           '<div class="panel"><p class="label-sm">Resultado</p>'+
@@ -630,6 +703,21 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
             ["Margen",T?pct(v.ganancia/T):"—"],["Ganancia por tonelada",v.toneladas?money(v.ganancia/v.toneladas):"—"],["Gasoil por tonelada",v.toneladas?money(v.costo_gasoil/v.toneladas):"—"],
             ["Consumo",km?fN.format(v.litros/v.km*100)+" L/100km":"—"],["Costo por km",km?money(v.total_gastos/v.km):"—"],["Ganancia por km",km?money(v.ganancia/v.km):"—"]])+'</div>'+
         '</div></div>';
+      $("rem-det").addEventListener("change",function(){
+        var st=$("rem-det-st");
+        subirFotos(this.files,"/api/viajes/"+v.id+"/remitos",function(){ viajesCache=null; renderDetalle(v.id); },
+          function(t,err){ st.textContent=t; st.classList.toggle("err",!!err); });
+      });
+      body.querySelectorAll(".thumb .x[data-rid]").forEach(function(b){
+        var armado=false, tt;
+        b.addEventListener("click",function(){
+          if(!armado){ armado=true; b.classList.add("confirm"); b.textContent="¿Quitar?";
+            tt=setTimeout(function(){ armado=false; b.classList.remove("confirm"); b.textContent="×"; },3500); return; }
+          clearTimeout(tt);
+          api("/api/remitos/"+b.getAttribute("data-rid"),{method:"DELETE"})
+            .then(function(){ viajesCache=null; renderDetalle(v.id); }).catch(function(e){ toast(esc(e.message)); });
+        });
+      });
       $("fac-up").addEventListener("change",function(){
         var f=this.files[0]; if(!f) return;
         var fd=new FormData(); fd.append("archivo",f);
@@ -899,9 +987,9 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
   var restored=false;
   try{
     var d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");
-    if(d){ NUMS.concat(TEXTS).forEach(function(id){ if(typeof d[id]==="string") $(id).value=d[id]; }); if(d.extra) extra=Object.assign({}, EXTRA0, d.extra); restored=true; }
+    if(d){ NUMS.concat(TEXTS).forEach(function(id){ if(typeof d[id]==="string") $(id).value=d[id]; }); if(d.extra){ extra=Object.assign(extraVacio(), d.extra); if(!Array.isArray(extra.remitos)) extra.remitos=[]; } restored=true; }
   }catch(e){}
-  if(!restored) limpiar(); else render();
+  if(!restored) limpiar(); else { render(); renderRemitosCalc(); }
 
   api("/api/estado").then(function(s){ if(s.requiere_clave && !s.autenticado) showLogin(); else showMain(); })
     .catch(function(){ showMain(); });

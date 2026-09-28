@@ -20,6 +20,7 @@ from .resumen import resumen
 
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 MAX_PDF = 10 * 1024 * 1024  # 10 MB
+MAX_FOTO = 25 * 1024 * 1024  # fotos de celular
 
 # Contraseña opcional: si APP_PASSWORD está definida, la app pide clave.
 CLAVE = os.environ.get("APP_PASSWORD", "")
@@ -110,6 +111,13 @@ async def subir_factura(archivo: UploadFile = File(...)):
 
 # ---------- Viajes ----------
 
+class RemitoIn(BaseModel):
+    archivo: str = Field(max_length=160)
+    miniatura: str = Field("", max_length=160)
+    tipo: str = Field("foto", max_length=10)
+    nombre: str = Field("", max_length=200)
+
+
 class ViajeIn(BaseModel):
     fecha: date | None = None
     factura_nro: str = Field("", max_length=40)
@@ -128,6 +136,7 @@ class ViajeIn(BaseModel):
     notas: str = Field("", max_length=2000)
     factura_archivo: str = Field("", max_length=160)
     factura_nombre: str = Field("", max_length=200)
+    remitos: list[RemitoIn] = Field(default_factory=list, max_length=30)
 
 
 @app.get("/api/viajes")
@@ -140,9 +149,13 @@ def guardar_viaje(v: ViajeIn):
     if v.toneladas <= 0 or v.precio_tn <= 0:
         raise HTTPException(400, "Cargá las toneladas y el precio por tonelada antes de guardar.")
     datos = v.model_dump()
+    fotos = [f for f in datos.pop("remitos") if almacen.ruta_remito(f["archivo"])]  # solo archivos que existen
+    for f in fotos:
+        if f["miniatura"] and not almacen.ruta_remito(f["miniatura"]):
+            f["miniatura"] = ""
     if datos["factura_archivo"] and not almacen.ruta(datos["factura_archivo"]):
         datos["factura_archivo"] = datos["factura_nombre"] = ""   # referencia inválida: se ignora
-    return db.crear(datos)
+    return db.crear(datos, fotos)
 
 
 @app.get("/api/viajes/excel")
@@ -214,6 +227,56 @@ async def adjuntar_factura(viaje_id: int, archivo: UploadFile = File(...)):
     return db.asignar_factura(viaje_id, nombre, _nombre_original(archivo))
 
 
+# ---------- Remitos (fotos) ----------
+
+async def _guardar_foto(archivo: UploadFile) -> dict:
+    contenido = await archivo.read(MAX_FOTO + 1)
+    if len(contenido) > MAX_FOTO:
+        raise HTTPException(413, "La foto supera los 25 MB.")
+    if not contenido:
+        raise HTTPException(400, "El archivo está vacío.")
+    try:
+        foto = await asyncio.to_thread(almacen.guardar_remito, contenido)
+    except almacen.FormatoNoSoportado as e:
+        raise HTTPException(400, f"{e} Subí una foto (JPG, PNG, HEIC) o un PDF.")
+    except OSError:
+        raise HTTPException(500, "No se pudo guardar la foto en el servidor.")
+    foto["nombre"] = _nombre_original(archivo)
+    return foto
+
+
+@app.post("/api/remitos")
+async def subir_remito(archivo: UploadFile = File(...)):
+    """Guarda una foto de remito antes de guardar el viaje (se asocia al guardar)."""
+    return await _guardar_foto(archivo)
+
+
+@app.post("/api/viajes/{viaje_id}/remitos")
+async def agregar_remito(viaje_id: int, archivo: UploadFile = File(...)):
+    if not db.obtener(viaje_id):
+        raise HTTPException(404, "Ese viaje no existe.")
+    return db.agregar_remito(viaje_id, await _guardar_foto(archivo))
+
+
+@app.delete("/api/remitos/{remito_id}")
+def quitar_remito(remito_id: int):
+    if not db.quitar_remito(remito_id):
+        raise HTTPException(404, "Esa foto no existe.")
+    return {"ok": True}
+
+
+@app.get("/api/remitos/archivo/{nombre}")
+def ver_remito(nombre: str):
+    p = almacen.ruta_remito(nombre)
+    if not p:
+        raise HTTPException(404, "No se encontró la foto.")
+    tipo = "application/pdf" if p.suffix == ".pdf" else "image/jpeg"
+    return FileResponse(p, media_type=tipo, headers={
+        "Content-Disposition": f'inline; filename="remito-{p.name}"',
+        "Cache-Control": "private, max-age=31536000, immutable",  # el nombre cambia si cambia el archivo
+    })
+
+
 @app.get("/api/viajes/{viaje_id}/excel")
 def exportar_viaje(viaje_id: int):
     v = db.obtener(viaje_id)
@@ -236,6 +299,8 @@ def _xlsx(contenido: bytes, nombre: str) -> Response:
 
 @app.get("/{ruta:path}", include_in_schema=False)
 def pagina(ruta: str):
+    if ruta.startswith("api/"):
+        raise HTTPException(404, "No encontrado.")
     archivo = (PUBLIC / ruta).resolve()
     if ruta and archivo.is_file() and PUBLIC in archivo.parents:
         return FileResponse(archivo)

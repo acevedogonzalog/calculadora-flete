@@ -86,6 +86,8 @@ def excel_viaje(v: dict) -> bytes:
     linea("Detalle", v.get("detalle") or "")
     linea("Remito", v.get("remito") or "")
     linea("CAE", v.get("cae") or "")
+    linea("Factura PDF", "Guardada en la app" if v.get("factura_archivo") else "No cargada")
+    linea("Fotos de remito", v.get("remitos_cant") or 0)
     fila += 1
 
     seccion("DATOS DEL VIAJE")

@@ -1,3 +1,7 @@
-node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+viajes.db
 .env
 .DS_Store

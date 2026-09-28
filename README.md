@@ -1,36 +1,44 @@
 # Calculadora de Flete
 
-Calculadora web para viajes de camión de carga. Se usa desde la PC o el celular.
+Aplicación web para viajes de camión de carga. Funciona en la PC y en el celular.
 
-A partir de los datos de la factura y del viaje calcula:
-
-- Total de la factura (toneladas × precio por tonelada)
-- Pago al chofer (porcentaje sobre el total, 18 % por defecto)
-- Costo de combustible (litros × precio del gasoil)
-- Total de gastos y ganancia neta
-- Margen, ganancia y gasoil por tonelada, y consumo y costos por km (si se cargan los km)
+- **Calculadora**: total de la factura, pago al chofer (porcentaje sobre el total), combustible, otros gastos, ganancia neta e indicadores por tonelada y por km.
+- **Carga de factura**: se sube el PDF de la factura electrónica de ARCA y se completan solos la fecha, el número, el cliente, el detalle, el remito, las toneladas y el precio.
+- **Viajes**: el botón *Guardar viaje* registra el viaje. En la sección *Viajes* está el historial con totales; al tocar un viaje se ve el detalle y se puede exportar a Excel o eliminar.
+- **Exportar**: Excel de un viaje con todo el detalle, o Excel con todos los viajes.
 
 ## Estructura
 
 ```
-public/index.html   La calculadora (HTML, CSS y JS en un solo archivo)
-server.js           Servidor estático mínimo en Node, sin dependencias
-package.json        Script de inicio para Railway
+main.py              Arranque del servidor (usa la variable PORT)
+app/server.py        API (FastAPI) y página
+app/factura.py       Lectura de la factura PDF (pdfplumber)
+app/excel.py         Exportación a Excel (openpyxl)
+app/db.py            Base de datos (PostgreSQL en Railway, SQLite en la compu)
+public/index.html    Interfaz
+requirements.txt     Librerías de Python
+railway.json         Comando de inicio para Railway
 ```
 
-## Correr en local
+## Correr en la compu
 
 ```bash
-npm start
-# abrir http://localhost:3000
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python main.py
+# abrir http://localhost:8000
 ```
 
-También se puede abrir `public/index.html` directamente en el navegador.
+Sin `DATABASE_URL` guarda los viajes en el archivo `viajes.db`.
 
-## Desplegar en Railway
+## Variables en Railway
 
-1. En Railway: **New Project → Deploy from GitHub repo** y elegir este repositorio.
-2. Railway detecta Node y ejecuta `npm start`. No hace falta configurar variables.
-3. En **Settings → Networking → Generate Domain** para obtener la dirección pública.
+| Variable | Para qué |
+|---|---|
+| `DATABASE_URL` | Base PostgreSQL donde se guardan los viajes. Poner `${{Postgres.DATABASE_URL}}`. **Sin esto los viajes se borran en cada despliegue.** |
+| `APP_PASSWORD` | Opcional pero recomendado. Si está definida, la app pide esta clave para entrar. |
 
-Cada `git push` a la rama principal vuelve a desplegar la app automáticamente.
+## Facturas
+
+El lector está pensado para la factura C que genera ARCA (Comprobantes en línea). Toma la primera página (ORIGINAL) y busca los datos por texto. Si la unidad está en kilos, la pasa a toneladas. Si algún dato no aparece, avisa en pantalla para completarlo a mano. No funciona con fotos o escaneos: hay que subir el PDF descargado de ARCA.

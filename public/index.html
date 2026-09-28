@@ -4,271 +4,619 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F2F3F0">
-<meta name="description" content="Calculadora de flete: total de factura, pago al chofer, gasoil y ganancia neta por viaje.">
+<meta name="description" content="Calculadora de flete: total de factura, pago al chofer, gasoil, ganancia neta e historial de viajes.">
 <title>Calculadora de Flete</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-html,body{margin:0}
-
 :root{
   color-scheme:light;
   --bg:#F2F3F0; --surface:#FFFFFF; --ink:#1B2220; --muted:#66706C; --line:#DCE0DC;
-  --field:#F7F8F6; --accent:#1E6B4F; --accent-soft:#E3EFE9;
-  --c-chofer:#3F6FA8; --c-gasoil:#C98A1A; --c-otros:#8A8F8C; --c-gan:#1E6B4F; --neg:#B23A2E;
+  --field:#F7F8F6; --accent:#1E6B4F; --accent-ink:#FFFFFF; --accent-soft:#E3EFE9;
+  --c-chofer:#3F6FA8; --c-gasoil:#C98A1A; --c-otros:#8A8F8C; --c-gan:#1E6B4F;
+  --neg:#B23A2E; --neg-soft:#F8E6E3; --warn:#8A5A00; --warn-soft:#FBF1DC;
   --display:"Archivo",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
 }
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
-.wrap{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:28px 48px}
-header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:22px}
-h1{font-family:var(--display);font-weight:700;font-size:26px;letter-spacing:-.01em;margin:0;text-wrap:balance}
-.sub{color:var(--muted);font-size:13px;margin:4px 0 0}
-.btn{font:500 13px var(--body);color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-top:env(safe-area-inset-top,0px)}
+[hidden]{display:none!important}
+button,input,textarea{font:inherit;color:inherit}
+.app{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:20px 32px}
+
+/* Encabezado y pestañas */
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-family:var(--display);font-weight:700;font-size:24px;letter-spacing:-.01em;margin:0}
+.tabs{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px;gap:2px}
+.tabs a{padding:7px 16px;border-radius:6px;color:var(--muted);text-decoration:none;font-weight:500;font-size:14px}
+.tabs a[aria-current="page"]{background:var(--accent);color:var(--accent-ink)}
+.tabs a .n{font-family:var(--mono);font-size:12px;opacity:.8;margin-left:4px}
+@media (max-width:480px){.top{flex-direction:column;align-items:stretch}.tabs a{flex:1;text-align:center}}
+
+/* Controles */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:500;font-size:14px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:7px;padding:9px 14px;cursor:pointer;text-decoration:none;white-space:nowrap}
 .btn:hover{border-color:var(--muted)}
-.btn:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
-@media (max-width:760px){.grid{grid-template-columns:1fr}}
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--neg)}
+.btn.danger.confirm{background:var(--neg);border-color:var(--neg);color:#fff}
+.btn:disabled{opacity:.55;cursor:default}
+a:focus-visible,.btn:focus-visible,input:focus-visible,textarea:focus-visible,.drop:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
 .label-sm{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
-.group+.group{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.stack{display:grid;gap:16px;align-content:start}
+
+/* Calculadora */
+.calc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.results{position:sticky;top:16px}
+@media (max-width:800px){.calc{grid-template-columns:1fr}.results{position:static}}
+
+.drop{display:flex;align-items:center;gap:14px;border:1.5px dashed var(--line);border-radius:8px;padding:14px;cursor:pointer;background:var(--field)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.drop .ico{flex:none;width:36px;height:36px;border-radius:8px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--accent)}
+.drop strong{display:block;font-weight:500}
+.drop small{color:var(--muted);font-size:12.5px}
+.msg{font-size:13px;border-radius:6px;padding:8px 10px;margin-top:10px}
+.msg.ok{background:var(--accent-soft);color:var(--accent)}
+.msg.warn{background:var(--warn-soft);color:var(--warn)}
+.msg.err{background:var(--neg-soft);color:var(--neg)}
+.msg ul{margin:4px 0 0;padding-left:18px}
+
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-top:14px}
+.fields .full{grid-column:1/-1}
+@media (max-width:420px){.fields{grid-template-columns:1fr}}
+.f label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px}
+.f input,.f textarea{width:100%;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:14.5px}
+.f textarea{resize:vertical;min-height:62px}
+.f input:focus,.f textarea:focus{outline:none;border-color:var(--accent)}
+
 .field{display:grid;grid-template-columns:1fr 150px;align-items:center;gap:10px;margin-bottom:10px}
+.field:last-child{margin-bottom:0}
 .field label{font-size:14px}
 .field small{display:block;color:var(--muted);font-size:12px}
-.inp{position:relative;display:flex;align-items:center;background:var(--field);border:1px solid var(--line);border-radius:6px}
+@media (max-width:420px){.field{grid-template-columns:1fr 132px}}
+.inp{display:flex;align-items:center;background:var(--field);border:1px solid var(--line);border-radius:6px}
 .inp:focus-within{border-color:var(--accent)}
-.inp span{font:400 13px var(--mono);color:var(--muted);padding-inline:10px 0;white-space:nowrap}
-.inp span.after{padding-inline:0 10px}
-.inp input{width:100%;min-width:0;border:0;background:transparent;color:var(--ink);font:500 15px var(--mono);text-align:right;padding:8px 10px;font-variant-numeric:tabular-nums}
+.inp span{font:400 13px var(--mono);color:var(--muted);padding-left:10px;white-space:nowrap}
+.inp span.after{padding:0 10px 0 0}
+.inp input{width:100%;min-width:0;border:0;background:transparent;font:500 15px var(--mono);text-align:right;padding:8px 10px;font-variant-numeric:tabular-nums}
 .inp input:focus{outline:none}
 .inp.bad{border-color:var(--neg)}
-@media (max-width:420px){.field{grid-template-columns:1fr 130px}}
 
+/* Resultados */
 .total{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
-.total .v{font:500 30px var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.bar{display:flex;height:12px;border-radius:3px;overflow:hidden;margin:16px 0 18px;background:var(--line)}
-.bar i{display:block;height:100%;transition:width .35s ease}
+.total .v{font:500 28px var(--mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.bar{display:flex;height:12px;border-radius:3px;overflow:hidden;margin:14px 0 14px;background:var(--line)}
+.bar i{display:block;height:100%;transition:width .3s ease}
 @media (prefers-reduced-motion:reduce){.bar i{transition:none}}
-.rows{display:grid;gap:0}
-.row{display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line)}
+.row{display:grid;grid-template-columns:12px 1fr auto auto;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:0}
 .dot{width:10px;height:10px;border-radius:2px;align-self:center}
-.row .pct{font:400 12px var(--mono);color:var(--muted);min-width:48px;text-align:right}
+.row .pct{font:400 12px var(--mono);color:var(--muted);min-width:46px;text-align:right}
 .row .amt{font:500 15px var(--mono);text-align:right;font-variant-numeric:tabular-nums}
 .row .d{display:block;font-size:12px;color:var(--muted)}
-.net{margin-top:14px;background:var(--accent-soft);border-radius:8px;padding:14px 16px;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.net{margin-top:12px;background:var(--accent-soft);border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
 .net .t{font-family:var(--display);font-weight:700;font-size:16px}
-.net .v{font:500 24px var(--mono);color:var(--c-gan);font-variant-numeric:tabular-nums}
-.net.loss .v{color:var(--neg)}
-.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
+.net .v{font:500 22px var(--mono);color:var(--c-gan);font-variant-numeric:tabular-nums}
+.net.loss{background:var(--neg-soft)} .net.loss .v{color:var(--neg)}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
 @media (max-width:420px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:9px 11px}
 .kpi .k{font-size:12px;color:var(--muted)}
-.kpi .v{font:500 15px var(--mono);font-variant-numeric:tabular-nums;margin-top:2px;overflow-wrap:anywhere}
+.kpi .v{font:500 14.5px var(--mono);font-variant-numeric:tabular-nums;margin-top:2px;overflow-wrap:anywhere}
 .kpi .v.na{color:var(--muted);font-family:var(--body);font-size:13px;font-weight:400}
-.note{color:var(--muted);font-size:12px;margin:14px 0 0;max-width:65ch}
+.note{color:var(--muted);font-size:12px;margin:12px 0 0;max-width:65ch}
+
+/* Barra de guardar */
+.savebar{position:sticky;bottom:0;z-index:5;margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:space-between;gap:12px;
+  box-shadow:0 -6px 18px rgba(27,34,32,.06)}
+.savebar .info{font-size:13px;color:var(--muted);min-width:0}
+.savebar .info b{display:block;font:500 17px var(--mono);color:var(--ink)}
+.savebar .btn{padding:11px 22px;font-size:15px}
+@media (max-width:480px){.savebar{border-radius:10px 10px 0 0;margin-inline:-16px}}
+
+/* Viajes */
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.sum .panel{padding:12px 14px}
+.sum .k{font-size:12px;color:var(--muted)}
+.sum .v{font:500 clamp(14px,4vw,18px) var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+@media (max-width:560px){.sum{grid-template-columns:1fr 1fr}.sum .panel:first-child{grid-column:1/-1}}
+.listhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.listhead h2{font-family:var(--display);font-size:18px;margin:0}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.trip{display:grid;grid-template-columns:92px minmax(0,1.6fr) 80px minmax(0,1fr) minmax(0,1fr) 16px;gap:12px;align-items:center;
+  padding:12px 14px;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+.trip:last-child{border-bottom:0}
+.trip:hover{background:var(--field)}
+.trip.head{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-block:9px;background:var(--field)}
+.trip.head:hover{background:var(--field)}
+.trip .date{font:400 13px var(--mono);color:var(--muted)}
+.trip .who{min-width:0}
+.trip .who b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trip .who small{display:block;color:var(--muted);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trip .num{font:500 14px var(--mono);text-align:right;font-variant-numeric:tabular-nums}
+.trip .num.gan{color:var(--c-gan)} .trip .num.neg{color:var(--neg)}
+.trip .chev{color:var(--muted)}
+.m{display:none}
+@media (max-width:640px){
+  .trip.head{display:none}
+  .trip{grid-template-columns:minmax(0,1fr) auto;gap:2px 12px}
+  .trip .date{grid-column:1;grid-row:1}
+  .trip .who{grid-column:1;grid-row:2}
+  .trip .tn,.trip .chev{display:none}
+  .trip .tot{grid-column:2;grid-row:1;font-weight:400;color:var(--muted);font-size:13px}
+  .trip .gan,.trip .neg{grid-column:2;grid-row:2;font-size:13.5px}
+  .trip .num{white-space:nowrap}
+  .m{display:inline;font:400 11px var(--body);color:var(--muted)}
+}
+.empty{text-align:center;padding:40px 16px;color:var(--muted)}
+.empty p{margin:0 0 14px}
+
+/* Detalle */
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:14px;margin-bottom:12px}
+.back:hover{color:var(--ink)}
+.dhead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.dhead h2{font-family:var(--display);font-size:22px;margin:0;text-wrap:balance}
+.dhead p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.detail{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:800px){.detail{grid-template-columns:1fr}}
+dl.kv{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:0}
+dl.kv dt,dl.kv dd{padding:8px 0;border-bottom:1px solid var(--line);margin:0}
+dl.kv dt{color:var(--muted);font-size:13.5px;padding-right:14px}
+dl.kv dd{text-align:right;font:500 14px var(--mono);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+dl.kv dd.txt{font-family:var(--body);font-weight:400;font-size:14px}
+dl.kv > :nth-last-child(-n+2){border-bottom:0}
+.notes{white-space:pre-wrap;font-size:14px;margin:0}
+
+/* Login y avisos */
+.login{max-width:360px;margin:12vh auto 0}
+.login h1{margin-bottom:6px}
+.login p{color:var(--muted);margin:0 0 16px}
+.login form{display:grid;gap:10px}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;
+  background:var(--ink);color:#fff;border-radius:8px;padding:10px 14px;font-size:14px;display:flex;gap:14px;align-items:center;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);max-width:calc(100% - 32px)}
+.toast a{color:#9FE0C2;font-weight:500}
+.loading{color:var(--muted);padding:30px 0;text-align:center}
 </style>
 </head>
 <body>
 
-<div class="wrap">
-  <header>
-    <div>
-      <h1>Calculadora de Flete</h1>
-      <p class="sub" id="status">Ejemplo cargado: factura 00001-00000106 · Maní semilla · 28 tn</p>
-    </div>
-    <button class="btn" id="reset" type="button">Volver al ejemplo</button>
+<!-- Ingreso con clave (solo si APP_PASSWORD está configurada) -->
+<section class="app" id="v-login" hidden>
+  <div class="login panel">
+    <h1>Calculadora de Flete</h1>
+    <p>Ingresá la clave para ver y guardar viajes.</p>
+    <form id="login-form">
+      <div class="f"><label for="login-clave">Clave</label><input id="login-clave" type="password" autocomplete="current-password" required></div>
+      <button class="btn primary" type="submit">Ingresar</button>
+      <div class="msg err" id="login-err" hidden></div>
+    </form>
+  </div>
+</section>
+
+<div class="app" id="v-main" hidden>
+  <header class="top">
+    <h1>Calculadora de Flete</h1>
+    <nav class="tabs" aria-label="Secciones">
+      <a href="#calculadora" id="tab-calc">Calculadora</a>
+      <a href="#viajes" id="tab-viajes">Viajes<span class="n" id="tab-count"></span></a>
+    </nav>
   </header>
 
-  <div class="grid">
-    <form class="panel" id="form" autocomplete="off">
-      <div class="group">
-        <p class="label-sm">Factura</p>
-        <div class="field">
-          <label for="tn">Cantidad<small>Toneladas transportadas</small></label>
-          <div class="inp"><input id="tn" inputmode="decimal" value="28"><span class="after">tn</span></div>
-        </div>
-        <div class="field">
-          <label for="precio">Precio por tonelada</label>
-          <div class="inp"><span>$</span><input id="precio" inputmode="decimal" value="54.049"></div>
-        </div>
+  <!-- ============ CALCULADORA ============ -->
+  <section id="v-calc">
+    <div class="calc">
+      <div class="stack">
+        <form class="panel" id="f-factura" autocomplete="off" onsubmit="return false">
+          <p class="label-sm">Factura</p>
+          <label class="drop" id="drop">
+            <input type="file" id="pdf" accept="application/pdf,.pdf">
+            <span class="ico" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg>
+            </span>
+            <span><strong id="drop-t">Subir factura PDF</strong><small id="drop-s">Completa los datos automáticamente. También podés cargarlos a mano.</small></span>
+          </label>
+          <div id="pdf-msg" hidden></div>
+          <div class="fields">
+            <div class="f"><label for="fecha">Fecha</label><input id="fecha" type="date"></div>
+            <div class="f"><label for="factura_nro">Nº de factura</label><input id="factura_nro" placeholder="00001-00000000"></div>
+            <div class="f full"><label for="cliente">Cliente</label><input id="cliente" placeholder="Razón social"></div>
+            <div class="f"><label for="detalle">Detalle</label><input id="detalle" placeholder="Ej.: Flete de maní"></div>
+            <div class="f"><label for="remito">Remito</label><input id="remito"></div>
+          </div>
+        </form>
+
+        <form class="panel" id="f-num" autocomplete="off" onsubmit="return false">
+          <p class="label-sm">Carga</p>
+          <div class="field">
+            <label for="toneladas">Cantidad<small>Toneladas transportadas</small></label>
+            <div class="inp"><input id="toneladas" inputmode="decimal"><span class="after">tn</span></div>
+          </div>
+          <div class="field">
+            <label for="precio_tn">Precio por tonelada</label>
+            <div class="inp"><span>$</span><input id="precio_tn" inputmode="decimal"></div>
+          </div>
+        </form>
+
+        <form class="panel" id="f-viaje" autocomplete="off" onsubmit="return false">
+          <p class="label-sm">Viaje</p>
+          <div class="field">
+            <label for="pct_chofer">Porcentaje chofer<small>Sobre el total de la factura</small></label>
+            <div class="inp"><input id="pct_chofer" inputmode="decimal"><span class="after">%</span></div>
+          </div>
+          <div class="field">
+            <label for="precio_gasoil">Precio del gasoil<small>Por litro</small></label>
+            <div class="inp"><span>$</span><input id="precio_gasoil" inputmode="decimal"></div>
+          </div>
+          <div class="field">
+            <label for="litros">Gasoil consumido</label>
+            <div class="inp"><input id="litros" inputmode="decimal"><span class="after">L</span></div>
+          </div>
+          <div class="field">
+            <label for="km">Kilómetros<small>Opcional</small></label>
+            <div class="inp"><input id="km" inputmode="decimal" placeholder="—"><span class="after">km</span></div>
+          </div>
+          <div class="field">
+            <label for="otros_gastos">Otros gastos<small>Peajes, viáticos, etc.</small></label>
+            <div class="inp"><span>$</span><input id="otros_gastos" inputmode="decimal"></div>
+          </div>
+          <div class="f" style="margin-top:12px"><label for="notas">Notas (opcional)</label><textarea id="notas" placeholder="Chofer, patente, origen y destino…"></textarea></div>
+        </form>
       </div>
 
-      <div class="group">
-        <p class="label-sm">Viaje</p>
-        <div class="field">
-          <label for="pct">Porcentaje chofer<small>Sobre el total de la factura</small></label>
-          <div class="inp"><input id="pct" inputmode="decimal" value="18"><span class="after">%</span></div>
+      <section class="panel results" aria-live="polite">
+        <p class="label-sm">Resultado del viaje</p>
+        <div class="total"><span>Total factura</span><span class="v" id="r-total"></span></div>
+        <div class="bar" aria-hidden="true">
+          <i id="b-chofer" style="background:var(--c-chofer)"></i><i id="b-gasoil" style="background:var(--c-gasoil)"></i><i id="b-otros" style="background:var(--c-otros)"></i><i id="b-gan" style="background:var(--c-gan)"></i>
         </div>
-        <div class="field">
-          <label for="gasoil">Precio del gasoil<small>Por litro</small></label>
-          <div class="inp"><span>$</span><input id="gasoil" inputmode="decimal" value="2.300"></div>
+        <div>
+          <div class="row"><span class="dot" style="background:var(--c-chofer)"></span><span>Pago al chofer<span class="d" id="d-chofer"></span></span><span class="pct" id="p-chofer"></span><span class="amt" id="r-chofer"></span></div>
+          <div class="row"><span class="dot" style="background:var(--c-gasoil)"></span><span>Combustible<span class="d" id="d-gasoil"></span></span><span class="pct" id="p-gasoil"></span><span class="amt" id="r-gasoil"></span></div>
+          <div class="row"><span class="dot" style="background:var(--c-otros)"></span><span>Otros gastos</span><span class="pct" id="p-otros"></span><span class="amt" id="r-otros"></span></div>
+          <div class="row"><span class="dot"></span><span><strong>Total gastos</strong></span><span class="pct" id="p-gastos"></span><span class="amt" id="r-gastos"></span></div>
         </div>
-        <div class="field">
-          <label for="litros">Gasoil consumido</label>
-          <div class="inp"><input id="litros" inputmode="decimal" value="250"><span class="after">L</span></div>
+        <div class="net" id="net"><span class="t">Ganancia neta</span><span class="v" id="r-gan"></span></div>
+        <div class="kpis">
+          <div class="kpi"><div class="k">Margen</div><div class="v" id="k-margen"></div></div>
+          <div class="kpi"><div class="k">Ganancia por tn</div><div class="v" id="k-gtn"></div></div>
+          <div class="kpi"><div class="k">Gasoil por tn</div><div class="v" id="k-ctn"></div></div>
+          <div class="kpi"><div class="k">Consumo</div><div class="v" id="k-cons"></div></div>
+          <div class="kpi"><div class="k">Costo por km</div><div class="v" id="k-ckm"></div></div>
+          <div class="kpi"><div class="k">Ganancia por km</div><div class="v" id="k-gkm"></div></div>
         </div>
-        <div class="field">
-          <label for="km">Kilómetros<small>Opcional</small></label>
-          <div class="inp"><input id="km" inputmode="decimal" value="" placeholder="—"><span class="after">km</span></div>
-        </div>
-        <div class="field">
-          <label for="otros">Otros gastos<small>Peajes, viáticos, etc.</small></label>
-          <div class="inp"><span>$</span><input id="otros" inputmode="decimal" value="0"></div>
-        </div>
-      </div>
-    </form>
+        <p class="note">La ganancia neta no descuenta monotributo, mantenimiento, cubiertas, seguro ni desgaste del camión. Podés sumarlos en "Otros gastos".</p>
+      </section>
+    </div>
 
-    <section class="panel" aria-live="polite">
-      <p class="label-sm">Resultado del viaje</p>
-      <div class="total">
-        <span>Total factura</span>
-        <span class="v" id="r-total">$ 0</span>
+    <div class="savebar">
+      <div class="info" id="save-info">Ganancia neta<b id="save-gan"></b></div>
+      <div class="actions">
+        <button class="btn" type="button" id="btn-limpiar">Limpiar</button>
+        <button class="btn primary" type="button" id="btn-guardar">Guardar viaje</button>
       </div>
+    </div>
+  </section>
 
-      <div class="bar" id="bar" aria-hidden="true">
-        <i id="b-chofer" style="background:var(--c-chofer)"></i>
-        <i id="b-gasoil" style="background:var(--c-gasoil)"></i>
-        <i id="b-otros" style="background:var(--c-otros)"></i>
-        <i id="b-gan" style="background:var(--c-gan)"></i>
-      </div>
+  <!-- ============ VIAJES ============ -->
+  <section id="v-viajes" hidden>
+    <div class="sum">
+      <div class="panel"><div class="k">Viajes</div><div class="v" id="s-n"></div></div>
+      <div class="panel"><div class="k">Facturado</div><div class="v" id="s-fact"></div></div>
+      <div class="panel"><div class="k">Ganancia neta</div><div class="v" id="s-gan"></div></div>
+    </div>
+    <div class="listhead">
+      <h2>Historial</h2>
+      <a class="btn" id="btn-export-todos" href="/api/viajes/excel">Exportar todos a Excel</a>
+    </div>
+    <div class="list" id="lista"><div class="loading">Cargando viajes…</div></div>
+  </section>
 
-      <div class="rows">
-        <div class="row">
-          <span class="dot" style="background:var(--c-chofer)"></span>
-          <span>Pago al chofer<span class="d" id="d-chofer"></span></span>
-          <span class="pct" id="p-chofer"></span>
-          <span class="amt" id="r-chofer"></span>
-        </div>
-        <div class="row">
-          <span class="dot" style="background:var(--c-gasoil)"></span>
-          <span>Combustible<span class="d" id="d-gasoil"></span></span>
-          <span class="pct" id="p-gasoil"></span>
-          <span class="amt" id="r-gasoil"></span>
-        </div>
-        <div class="row">
-          <span class="dot" style="background:var(--c-otros)"></span>
-          <span>Otros gastos</span>
-          <span class="pct" id="p-otros"></span>
-          <span class="amt" id="r-otros"></span>
-        </div>
-        <div class="row">
-          <span class="dot" style="background:transparent"></span>
-          <span><strong>Total gastos</strong></span>
-          <span class="pct" id="p-gastos"></span>
-          <span class="amt" id="r-gastos"></span>
-        </div>
-      </div>
-
-      <div class="net" id="net">
-        <span class="t">Ganancia neta</span>
-        <span class="v" id="r-gan"></span>
-      </div>
-
-      <div class="kpis">
-        <div class="kpi"><div class="k">Margen</div><div class="v" id="k-margen"></div></div>
-        <div class="kpi"><div class="k">Ganancia por tn</div><div class="v" id="k-gtn"></div></div>
-        <div class="kpi"><div class="k">Gasoil por tn</div><div class="v" id="k-ctn"></div></div>
-        <div class="kpi"><div class="k">Consumo</div><div class="v" id="k-cons"></div></div>
-        <div class="kpi"><div class="k">Costo por km</div><div class="v" id="k-ckm"></div></div>
-        <div class="kpi"><div class="k">Ganancia por km</div><div class="v" id="k-gkm"></div></div>
-      </div>
-
-      <p class="note">La ganancia neta no descuenta monotributo, mantenimiento, cubiertas, seguro ni desgaste del camión. Podés sumarlos en "Otros gastos".</p>
-    </section>
-  </div>
+  <!-- ============ DETALLE ============ -->
+  <section id="v-detalle" hidden>
+    <a class="back" href="#viajes">← Volver a viajes</a>
+    <div id="detalle-body"><div class="loading">Cargando…</div></div>
+  </section>
 </div>
+
+<div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 (function(){
-  var IDS=["tn","precio","pct","gasoil","litros","km","otros"];
-  var EXAMPLE={tn:"28",precio:"54.049",pct:"18",gasoil:"2.300",litros:"250",km:"",otros:"0"};
-  var KEY="calc-flete-v1";
-  var $=function(id){return document.getElementById(id)};
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var NUMS = ["toneladas","precio_tn","pct_chofer","precio_gasoil","litros","km","otros_gastos"];
+  var TEXTS = ["fecha","factura_nro","cliente","detalle","remito","notas"];
+  var DEF_KEY = "cf-defaults-v1", DRAFT_KEY = "cf-borrador-v1";
+  var extra = { cliente_cuit:"", cae:"" };   // datos de la factura que no se muestran en pantalla
+  var viajesCache = null;
 
-  // Acepta formato argentino (54.049 / 2.300,50) y también punto decimal (28.5)
+  /* ---------- Formatos ---------- */
+  var fM = new Intl.NumberFormat("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2});
+  var fN = new Intl.NumberFormat("es-AR",{maximumFractionDigits:2});
+  var fP = new Intl.NumberFormat("es-AR",{maximumFractionDigits:1});
+  function money(n){ return (n<0?"−$ ":"$ ")+fM.format(Math.abs(n)); }
+  function pct(n){ return fP.format(n*100)+" %"; }
+  function fecha(iso){ if(!iso) return "Sin fecha"; var p=iso.slice(0,10).split("-"); return p[2]+"/"+p[1]+"/"+p[0]; }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+  // Acepta 54.049 / 2.300,50 / 28,5 / 28.5
   function parse(s){
-    s=String(s||"").trim().replace(/\s|\$/g,"");
+    s=String(s==null?"":s).trim().replace(/\s|\$/g,"");
     if(s==="") return null;
-    if(s.indexOf(",")>=0){ s=s.replace(/\./g,"").replace(",","."); }
-    else if(/^\d{1,3}(\.\d{3})+$/.test(s)){ s=s.replace(/\./g,""); }
-    var n=Number(s);
-    return isFinite(n)?n:NaN;
+    if(s.indexOf(",")>=0) s=s.replace(/\./g,"").replace(",",".");
+    else if(/^\d{1,3}(\.\d{3})+$/.test(s)) s=s.replace(/\./g,"");
+    var n=Number(s); return isFinite(n)?n:NaN;
   }
-  var fmtM=new Intl.NumberFormat("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2});
-  var fmtN=new Intl.NumberFormat("es-AR",{maximumFractionDigits:1});
-  function money(n){return (n<0?"−$ ":"$ ")+fmtM.format(Math.abs(n))}
-  function pct(n){return fmtN.format(n*100)+" %"}
-  function set(id,t){$(id).textContent=t}
-  function na(id,t){var e=$(id);e.textContent=t;e.classList.add("na")}
-  function ok(id,t){var e=$(id);e.textContent=t;e.classList.remove("na")}
+  function toInput(n){ return (n==null||n==="")?"":fN.format(n); }
 
-  function calc(){
-    var v={},bad=false;
-    IDS.forEach(function(id){
-      var n=parse($(id).value);
-      var wrong=Number.isNaN(n)||(n!==null&&n<0);
+  /* ---------- API ---------- */
+  function api(path, opts){
+    return fetch(path, Object.assign({credentials:"same-origin"}, opts||{})).then(function(r){
+      if(r.status===401 && path!=="/api/login"){ showLogin(); throw new Error("Ingresá la clave para continuar."); }
+      return r.json().catch(function(){ return {}; }).then(function(d){
+        if(!r.ok) throw new Error(d.detail && typeof d.detail==="string" ? d.detail : "Algo salió mal. Probá de nuevo.");
+        return d;
+      });
+    });
+  }
+
+  /* ---------- Toast ---------- */
+  var toastT;
+  function toast(html, ms){
+    var t=$("toast"); t.innerHTML=html; t.hidden=false;
+    clearTimeout(toastT); toastT=setTimeout(function(){ t.hidden=true; }, ms||4000);
+  }
+
+  /* ---------- Calculadora ---------- */
+  function leer(){
+    var v={}, bad=false;
+    NUMS.forEach(function(id){
+      var n=parse($(id).value), wrong=Number.isNaN(n)||(n!==null&&n<0);
+      if(id==="pct_chofer" && n>100) wrong=true;
       $(id).parentNode.classList.toggle("bad",wrong);
       if(wrong) bad=true;
-      v[id]=(n===null||wrong)?0:n;
+      v[id]=(n===null||wrong)?(id==="km"?null:0):n;
     });
-    var total=v.tn*v.precio;
-    var chofer=total*v.pct/100;
-    var gasoil=v.gasoil*v.litros;
-    var otros=v.otros;
-    var gastos=chofer+gasoil+otros;
-    var gan=total-gastos;
-    var share=function(x){return total>0?x/total:0};
+    v.bad=bad; return v;
+  }
+  function calcular(v){
+    var total=v.toneladas*v.precio_tn, chofer=total*v.pct_chofer/100, gasoil=v.precio_gasoil*v.litros;
+    var gastos=chofer+gasoil+v.otros_gastos;
+    return {total:total, pago_chofer:chofer, costo_gasoil:gasoil, total_gastos:gastos, ganancia:total-gastos};
+  }
+  function setT(id,t){ $(id).textContent=t; }
+  function kpi(id,val,naText){ var e=$(id); e.textContent=val==null?naText:val; e.classList.toggle("na",val==null); }
 
-    set("r-total",money(total));
-    set("r-chofer",money(chofer)); set("p-chofer",total?pct(share(chofer)):"");
-    set("r-gasoil",money(gasoil)); set("p-gasoil",total?pct(share(gasoil)):"");
-    set("r-otros",money(otros));   set("p-otros",total?pct(share(otros)):"");
-    set("r-gastos",money(gastos)); set("p-gastos",total?pct(share(gastos)):"");
-    set("d-chofer",fmtN.format(v.pct)+" % de la factura");
-    set("d-gasoil",fmtN.format(v.litros)+" L × "+money(v.gasoil));
-    set("r-gan",money(gan));
-    $("net").classList.toggle("loss",gan<0);
-
-    // barra: reparto del total de la factura
-    var base=Math.max(total,gastos)||1;
-    $("b-chofer").style.width=(chofer/base*100)+"%";
-    $("b-gasoil").style.width=(gasoil/base*100)+"%";
-    $("b-otros").style.width=(otros/base*100)+"%";
-    $("b-gan").style.width=(Math.max(gan,0)/base*100)+"%";
-
-    ok("k-margen",total?pct(gan/total):"—");
-    if(v.tn>0){ok("k-gtn",money(gan/v.tn));ok("k-ctn",money(gasoil/v.tn));}
-    else{na("k-gtn","Cargá toneladas");na("k-ctn","Cargá toneladas");}
-    if(v.km>0){
-      ok("k-cons",fmtN.format(v.litros/v.km*100)+" L/100km");
-      ok("k-ckm",money(gastos/v.km));
-      ok("k-gkm",money(gan/v.km));
-    }else{
-      ["k-cons","k-ckm","k-gkm"].forEach(function(id){na(id,"Cargá los km")});
-    }
-
-    var same=IDS.every(function(id){return $(id).value.trim()===EXAMPLE[id]});
-    set("status", bad ? "Revisá los campos marcados en rojo: solo números positivos."
-      : same ? "Ejemplo cargado: factura 00001-00000106 · Maní semilla · 28 tn"
-      : "Cálculo con tus datos");
-    try{var o={};IDS.forEach(function(id){o[id]=$(id).value});localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}
+  function render(){
+    var v=leer(), r=calcular(v), T=r.total;
+    var sh=function(x){ return T>0?pct(x/T):""; };
+    setT("r-total",money(T));
+    setT("r-chofer",money(r.pago_chofer)); setT("p-chofer",sh(r.pago_chofer));
+    setT("r-gasoil",money(r.costo_gasoil)); setT("p-gasoil",sh(r.costo_gasoil));
+    setT("r-otros",money(v.otros_gastos)); setT("p-otros",sh(v.otros_gastos));
+    setT("r-gastos",money(r.total_gastos)); setT("p-gastos",sh(r.total_gastos));
+    setT("d-chofer",fP.format(v.pct_chofer)+" % de la factura");
+    setT("d-gasoil",fN.format(v.litros)+" L × "+money(v.precio_gasoil));
+    setT("r-gan",money(r.ganancia)); setT("save-gan",money(r.ganancia));
+    $("net").classList.toggle("loss",r.ganancia<0);
+    var base=Math.max(T,r.total_gastos)||1;
+    $("b-chofer").style.width=(r.pago_chofer/base*100)+"%";
+    $("b-gasoil").style.width=(r.costo_gasoil/base*100)+"%";
+    $("b-otros").style.width=(v.otros_gastos/base*100)+"%";
+    $("b-gan").style.width=(Math.max(r.ganancia,0)/base*100)+"%";
+    kpi("k-margen", T?pct(r.ganancia/T):null, "—");
+    kpi("k-gtn", v.toneladas>0?money(r.ganancia/v.toneladas):null, "Cargá toneladas");
+    kpi("k-ctn", v.toneladas>0?money(r.costo_gasoil/v.toneladas):null, "Cargá toneladas");
+    var km=v.km>0;
+    kpi("k-cons", km?fN.format(v.litros/v.km*100)+" L/100km":null, "Cargá los km");
+    kpi("k-ckm", km?money(r.total_gastos/v.km):null, "Cargá los km");
+    kpi("k-gkm", km?money(r.ganancia/v.km):null, "Cargá los km");
+    guardarBorrador();
   }
 
-  try{
-    var saved=JSON.parse(localStorage.getItem(KEY)||"null");
-    if(saved) IDS.forEach(function(id){ if(typeof saved[id]==="string") $(id).value=saved[id]; });
-  }catch(e){}
+  function guardarBorrador(){
+    try{
+      var d={extra:extra}; NUMS.concat(TEXTS).forEach(function(id){ d[id]=$(id).value; });
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+      localStorage.setItem(DEF_KEY, JSON.stringify({pct_chofer:$("pct_chofer").value, precio_gasoil:$("precio_gasoil").value}));
+    }catch(e){}
+  }
+  function defaults(){
+    var d={pct_chofer:"18", precio_gasoil:"2.300"};
+    try{ var s=JSON.parse(localStorage.getItem(DEF_KEY)||"null"); if(s){ if(s.pct_chofer) d.pct_chofer=s.pct_chofer; if(s.precio_gasoil) d.precio_gasoil=s.precio_gasoil; } }catch(e){}
+    return d;
+  }
+  function limpiar(){
+    var d=defaults();
+    NUMS.concat(TEXTS).forEach(function(id){ $(id).value=""; });
+    $("pct_chofer").value=d.pct_chofer; $("precio_gasoil").value=d.precio_gasoil; $("otros_gastos").value="0";
+    $("fecha").value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+    extra={cliente_cuit:"",cae:""};
+    $("pdf-msg").hidden=true; $("drop-t").textContent="Subir factura PDF";
+    render();
+  }
 
-  IDS.forEach(function(id){$(id).addEventListener("input",calc)});
-  $("form").addEventListener("submit",function(e){e.preventDefault()});
-  $("reset").addEventListener("click",function(){
-    IDS.forEach(function(id){$(id).value=EXAMPLE[id]}); calc();
+  /* ---------- Factura PDF ---------- */
+  function subirPDF(file){
+    if(!file) return;
+    var msg=$("pdf-msg");
+    if(!/\.pdf$/i.test(file.name) && file.type!=="application/pdf"){
+      msg.className="msg err"; msg.textContent="Elegí un archivo PDF (la factura descargada de ARCA)."; msg.hidden=false; return;
+    }
+    $("drop-t").textContent="Leyendo "+file.name+"…";
+    var fd=new FormData(); fd.append("archivo",file);
+    api("/api/factura",{method:"POST",body:fd}).then(function(d){
+      if(d.fecha) $("fecha").value=d.fecha;
+      ["factura_nro","cliente","detalle","remito"].forEach(function(k){ if(d[k]) $(k).value=d[k]; });
+      if(d.toneladas!=null) $("toneladas").value=toInput(d.toneladas);
+      if(d.precio_tn!=null) $("precio_tn").value=toInput(d.precio_tn);
+      extra={cliente_cuit:d.cliente_cuit||"", cae:d.cae||""};
+      $("drop-t").textContent="Factura "+(d.factura_nro||file.name);
+      var av=d.avisos||[];
+      if(av.length){
+        msg.className="msg warn";
+        msg.innerHTML="Se cargaron los datos, pero revisá:<ul>"+av.map(function(a){return "<li>"+esc(a)+"</li>";}).join("")+"</ul>";
+      }else{
+        msg.className="msg ok";
+        msg.textContent="Datos cargados: "+fN.format(d.toneladas)+" tn a "+money(d.precio_tn)+" · total "+money(d.importe_total||0)+". Completá litros y km del viaje.";
+      }
+      msg.hidden=false; render();
+    }).catch(function(e){
+      $("drop-t").textContent="Subir factura PDF";
+      msg.className="msg err"; msg.textContent=e.message; msg.hidden=false;
+    }).finally(function(){ $("pdf").value=""; });
+  }
+
+  /* ---------- Guardar ---------- */
+  function guardar(){
+    var v=leer();
+    if(v.bad){ toast("Revisá los campos marcados en rojo."); return; }
+    if(!(v.toneladas>0) || !(v.precio_tn>0)){ toast("Cargá las toneladas y el precio por tonelada."); $("toneladas").focus(); return; }
+    var body={
+      fecha:$("fecha").value||null, factura_nro:$("factura_nro").value.trim(), cliente:$("cliente").value.trim(),
+      detalle:$("detalle").value.trim(), remito:$("remito").value.trim(), notas:$("notas").value.trim(),
+      cliente_cuit:extra.cliente_cuit, cae:extra.cae,
+      toneladas:v.toneladas, precio_tn:v.precio_tn, pct_chofer:v.pct_chofer, precio_gasoil:v.precio_gasoil,
+      litros:v.litros, km:v.km, otros_gastos:v.otros_gastos
+    };
+    var b=$("btn-guardar"); b.disabled=true; b.textContent="Guardando…";
+    api("/api/viajes",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+      .then(function(saved){
+        viajesCache=null; actualizarContador();
+        limpiar();
+        toast('Viaje guardado · <a href="#viaje/'+saved.id+'">Ver viaje</a>', 5000);
+      })
+      .catch(function(e){ toast(esc(e.message)); })
+      .finally(function(){ b.disabled=false; b.textContent="Guardar viaje"; });
+  }
+
+  /* ---------- Viajes ---------- */
+  function cargarViajes(){
+    if(viajesCache) return Promise.resolve(viajesCache);
+    return api("/api/viajes").then(function(l){ viajesCache=l; setT("tab-count", l.length?String(l.length):""); return l; });
+  }
+  function actualizarContador(){ cargarViajes().catch(function(){}); }
+
+  function renderViajes(){
+    var cont=$("lista");
+    cargarViajes().then(function(l){
+      var fact=0, gan=0; l.forEach(function(v){ fact+=v.total; gan+=v.ganancia; });
+      setT("s-n", String(l.length)); setT("s-fact", money(fact)); setT("s-gan", money(gan));
+      $("btn-export-todos").hidden = !l.length;
+      if(!l.length){
+        cont.innerHTML='<div class="empty"><p>Todavía no hay viajes guardados.</p><a class="btn primary" href="#calculadora">Cargar un viaje</a></div>';
+        return;
+      }
+      cont.innerHTML='<div class="trip head"><span>Fecha</span><span>Cliente</span><span class="num">Toneladas</span><span class="num">Facturado</span><span class="num">Ganancia</span><span></span></div>'+
+        l.map(function(v){
+          return '<a class="trip" href="#viaje/'+v.id+'">'+
+            '<span class="date">'+fecha(v.fecha)+'</span>'+
+            '<span class="who"><b>'+esc(v.cliente||"Sin cliente")+'</b><small>'+esc(v.detalle||v.factura_nro||"")+'</small></span>'+
+            '<span class="num tn">'+fN.format(v.toneladas)+' tn</span>'+
+            '<span class="num tot">'+money(v.total)+'</span>'+
+            '<span class="num '+(v.ganancia<0?"neg":"gan")+'"><span class="m">Ganancia </span>'+money(v.ganancia)+'</span>'+
+            '<span class="chev" aria-hidden="true">›</span></a>';
+        }).join("");
+    }).catch(function(e){ cont.innerHTML='<div class="empty"><p>'+esc(e.message)+'</p></div>'; });
+  }
+
+  function renderDetalle(id){
+    var body=$("detalle-body");
+    body.innerHTML='<div class="loading">Cargando…</div>';
+    api("/api/viajes/"+id).then(function(v){
+      var T=v.total, km=v.km>0, sh=function(x){ return T>0?" ("+pct(x/T)+")":""; };
+      var kv=function(rows){ return '<dl class="kv">'+rows.map(function(r){ return '<dt>'+r[0]+'</dt><dd'+(r[2]?' class="txt"':'')+'>'+r[1]+'</dd>'; }).join("")+'</dl>'; };
+      var base=Math.max(T,v.total_gastos)||1;
+      body.innerHTML=
+        '<div class="dhead"><div><h2>'+esc(v.cliente||"Sin cliente")+'</h2><p>'+fecha(v.fecha)+(v.factura_nro?' · Factura '+esc(v.factura_nro):'')+' · Viaje Nº '+v.id+'</p></div>'+
+        '<div class="actions"><a class="btn primary" href="/api/viajes/'+v.id+'/excel">Exportar a Excel</a>'+
+        '<button class="btn danger" type="button" id="btn-borrar">Eliminar</button></div></div>'+
+        '<div class="detail"><div class="stack">'+
+          '<div class="panel"><p class="label-sm">Factura</p>'+kv([
+            ["Fecha",fecha(v.fecha),1],["Nº de factura",esc(v.factura_nro||"—"),1],["Cliente",esc(v.cliente||"—"),1],
+            ["CUIT cliente",esc(v.cliente_cuit||"—"),1],["Detalle",esc(v.detalle||"—"),1],["Remito",esc(v.remito||"—"),1],["CAE",esc(v.cae||"—"),1]])+'</div>'+
+          '<div class="panel"><p class="label-sm">Datos del viaje</p>'+kv([
+            ["Toneladas",fN.format(v.toneladas)+" tn"],["Precio por tonelada",money(v.precio_tn)],["Porcentaje chofer",fP.format(v.pct_chofer)+" %"],
+            ["Precio gasoil",money(v.precio_gasoil)+" /L"],["Gasoil consumido",fN.format(v.litros)+" L"],["Kilómetros",km?fN.format(v.km)+" km":"—"],["Otros gastos",money(v.otros_gastos)]])+'</div>'+
+          (v.notas?'<div class="panel"><p class="label-sm">Notas</p><p class="notes">'+esc(v.notas)+'</p></div>':'')+
+        '</div><div class="stack">'+
+          '<div class="panel"><p class="label-sm">Resultado</p>'+
+            '<div class="total"><span>Total factura</span><span class="v">'+money(T)+'</span></div>'+
+            '<div class="bar" aria-hidden="true"><i style="width:'+(v.pago_chofer/base*100)+'%;background:var(--c-chofer)"></i><i style="width:'+(v.costo_gasoil/base*100)+'%;background:var(--c-gasoil)"></i><i style="width:'+(v.otros_gastos/base*100)+'%;background:var(--c-otros)"></i><i style="width:'+(Math.max(v.ganancia,0)/base*100)+'%;background:var(--c-gan)"></i></div>'+
+            kv([["Pago al chofer"+sh(v.pago_chofer),money(v.pago_chofer)],["Combustible"+sh(v.costo_gasoil),money(v.costo_gasoil)],["Otros gastos"+sh(v.otros_gastos),money(v.otros_gastos)],["Total gastos",money(v.total_gastos)]])+
+            '<div class="net'+(v.ganancia<0?' loss':'')+'"><span class="t">Ganancia neta</span><span class="v">'+money(v.ganancia)+'</span></div></div>'+
+          '<div class="panel"><p class="label-sm">Indicadores</p>'+kv([
+            ["Margen",T?pct(v.ganancia/T):"—"],["Ganancia por tonelada",v.toneladas?money(v.ganancia/v.toneladas):"—"],["Gasoil por tonelada",v.toneladas?money(v.costo_gasoil/v.toneladas):"—"],
+            ["Consumo",km?fN.format(v.litros/v.km*100)+" L/100km":"—"],["Costo por km",km?money(v.total_gastos/v.km):"—"],["Ganancia por km",km?money(v.ganancia/v.km):"—"]])+'</div>'+
+        '</div></div>';
+      var bb=$("btn-borrar"), armado=false, t;
+      bb.addEventListener("click",function(){
+        if(!armado){ armado=true; bb.classList.add("confirm"); bb.textContent="Tocá de nuevo para eliminar";
+          t=setTimeout(function(){ armado=false; bb.classList.remove("confirm"); bb.textContent="Eliminar"; },4000); return; }
+        clearTimeout(t); bb.disabled=true;
+        api("/api/viajes/"+v.id,{method:"DELETE"}).then(function(){
+          viajesCache=null; toast("Viaje eliminado."); location.hash="#viajes";
+        }).catch(function(e){ bb.disabled=false; toast(esc(e.message)); });
+      });
+    }).catch(function(e){
+      body.innerHTML='<div class="empty"><p>'+esc(e.message)+'</p><a class="btn" href="#viajes">Volver a viajes</a></div>';
+    });
+  }
+
+  /* ---------- Navegación ---------- */
+  function route(){
+    var h=location.hash.replace(/^#/,""), m=h.match(/^viaje\/(\d+)$/);
+    var vista = m ? "detalle" : (h==="viajes" ? "viajes" : "calc");
+    $("v-calc").hidden = vista!=="calc";
+    $("v-viajes").hidden = vista!=="viajes";
+    $("v-detalle").hidden = vista!=="detalle";
+    $("tab-calc").setAttribute("aria-current", vista==="calc"?"page":"false");
+    $("tab-viajes").setAttribute("aria-current", vista!=="calc"?"page":"false");
+    if(vista==="viajes") renderViajes();
+    if(vista==="detalle") renderDetalle(m[1]);
+    if(vista!=="calc") window.scrollTo(0,0);
+  }
+
+  /* ---------- Login ---------- */
+  function showLogin(){ $("v-main").hidden=true; $("v-login").hidden=false; $("login-clave").focus(); }
+  function showMain(){ $("v-login").hidden=true; $("v-main").hidden=false; route(); actualizarContador(); }
+  $("login-form").addEventListener("submit",function(e){
+    e.preventDefault();
+    var err=$("login-err"); err.hidden=true;
+    api("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({clave:$("login-clave").value})})
+      .then(showMain).catch(function(e){ err.textContent=e.message; err.hidden=false; });
   });
-  calc();
+
+  /* ---------- Inicio ---------- */
+  NUMS.concat(TEXTS).forEach(function(id){ $(id).addEventListener("input",render); });
+  $("pdf").addEventListener("change",function(){ subirPDF(this.files[0]); });
+  var drop=$("drop");
+  ["dragenter","dragover"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add("over"); }); });
+  ["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove("over"); }); });
+  drop.addEventListener("drop",function(e){ subirPDF(e.dataTransfer.files[0]); });
+  $("btn-guardar").addEventListener("click",guardar);
+  $("btn-limpiar").addEventListener("click",limpiar);
+  window.addEventListener("hashchange",route);
+
+  // Recuperar lo que se estaba cargando (borrador) o empezar limpio
+  var restored=false;
+  try{
+    var d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");
+    if(d){ NUMS.concat(TEXTS).forEach(function(id){ if(typeof d[id]==="string") $(id).value=d[id]; }); if(d.extra) extra=d.extra; restored=true; }
+  }catch(e){}
+  if(!restored) limpiar(); else render();
+
+  api("/api/estado").then(function(s){ if(s.requiere_clave && !s.autenticado) showLogin(); else showMain(); })
+    .catch(function(){ showMain(); });
 })();
 </script>
-
 </body>
 </html>

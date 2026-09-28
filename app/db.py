@@ -17,10 +17,25 @@ from sqlalchemy import (
 )
 
 
+def ruta_sqlite() -> str:
+    """Dónde va la base SQLite cuando no hay PostgreSQL.
+    En Railway, dentro del Volume (/data), así sobrevive a cada deploy."""
+    if os.environ.get("SQLITE_PATH"):
+        return os.environ["SQLITE_PATH"]
+    base = os.environ.get("DATA_DIR") or ("/data" if os.path.isdir("/data") else "")
+    return os.path.join(base, "viajes.db") if base else "viajes.db"
+
+
 def _url() -> str:
     url = os.environ.get("DATABASE_URL", "").strip()
     if not url:
-        return "sqlite:///" + os.environ.get("SQLITE_PATH", "viajes.db")
+        ruta = ruta_sqlite()
+        carpeta = os.path.dirname(os.path.abspath(ruta))
+        try:
+            os.makedirs(carpeta, exist_ok=True)   # si la carpeta todavía no existe, SQLite no puede crear el archivo
+        except OSError:
+            pass
+        return "sqlite:///" + ruta
     # Railway entrega postgresql://...; SQLAlchemy necesita indicar el driver
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
@@ -30,6 +45,18 @@ def _url() -> str:
 
 
 engine = create_engine(_url(), pool_pre_ping=True)
+ES_POSTGRES = engine.dialect.name == "postgresql"
+
+
+def almacenamiento() -> dict:
+    """¿Los datos sobreviven a un deploy? PostgreSQL de Railway sí; SQLite solo si está en el Volume."""
+    en_railway = bool(os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("RAILWAY_PROJECT_ID"))
+    volumen = os.path.ismount("/data") if en_railway else True
+    if ES_POSTGRES:
+        return {"base": "PostgreSQL", "base_permanente": True, "archivos_permanentes": volumen}
+    ruta = os.path.abspath(ruta_sqlite())
+    base_ok = (not en_railway) or (volumen and ruta.startswith("/data/"))
+    return {"base": f"Archivo {ruta}", "base_permanente": base_ok, "archivos_permanentes": volumen}
 metadata = MetaData()
 
 

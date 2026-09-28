@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import hmac
+import json
 import logging
 import os
 import re
+import tempfile
+import zipfile
 from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path as FsPath
@@ -15,9 +18,10 @@ from urllib.parse import urlsplit
 from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Path, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
+from starlette.background import BackgroundTask
 from pydantic import BaseModel, ConfigDict, Field
 
-from . import almacen, cuentas, db
+from . import almacen, cuentas, db, respaldo
 from .excel import excel_resumen, excel_todos, excel_viaje
 from .factura import leer_factura
 from .resumen import resumen
@@ -35,10 +39,33 @@ def _invitacion() -> str:
     return os.environ.get("CODIGO_INVITACION", "").strip()
 
 
+async def _respaldos_periodicos():
+    while True:
+        await asyncio.sleep(5 * 60)   # solo escribe si algo cambió
+        try:
+            await asyncio.to_thread(respaldo.hacer_respaldo, "automático")
+        except Exception:
+            log.exception("Falló el respaldo automático")
+
+
 @asynccontextmanager
 async def _vida(app_):
     db.init_db()
     almacen.iniciar()
+    restaurado = respaldo.restaurar_si_vacia()
+    if restaurado:
+        log.warning("Datos recuperados del respaldo %s", restaurado)
+    estado_alm = db.almacenamiento()
+    if not estado_alm["base_permanente"]:
+        log.warning("ATENCIÓN: la base de datos (%s) NO es permanente: se borra en cada deploy. "
+                    "Creá un Volume con mount path /data o configurá DATABASE_URL.", estado_alm["base"])
+    else:
+        log.info("Base de datos: %s", estado_alm["base"])
+    try:
+        respaldo.hacer_respaldo("inicio")
+    except Exception:
+        log.exception("Falló el respaldo al iniciar")
+    tarea = asyncio.create_task(_respaldos_periodicos())
     if not _invitacion():
         log.warning("CODIGO_INVITACION no está definida: nadie puede crear cuentas nuevas.")
     if not cuentas.correo_configurado():
@@ -47,6 +74,11 @@ async def _vida(app_):
     if os.environ.get("APP_PASSWORD"):
         log.info("APP_PASSWORD ya no se usa: ahora cada persona entra con su usuario y contraseña. Podés borrarla.")
     yield
+    tarea.cancel()
+    try:
+        respaldo.hacer_respaldo("apagado")   # Railway apaga el contenedor viejo en cada deploy
+    except Exception:
+        log.exception("Falló el respaldo al apagar")
 
 
 app = FastAPI(title="Calculadora de Flete", docs_url=None, redoc_url=None, openapi_url=None, lifespan=_vida)
@@ -142,8 +174,10 @@ def _correo_seguridad(bg: BackgroundTasks, u: dict, asunto: str, texto: str) -> 
 def estado(request: Request):
     token = _token_de(request)
     u = db.usuario_de_sesion(cuentas.huella(token)) if token else None
+    alm = db.almacenamiento()
     return {"autenticado": bool(u), **(_publico(u) if u else {}),
-            "registro_abierto": bool(_invitacion()), "correo_activo": cuentas.correo_configurado()}
+            "registro_abierto": bool(_invitacion()), "correo_activo": cuentas.correo_configurado(),
+            "almacenamiento_ok": alm["base_permanente"] and alm["archivos_permanentes"]}
 
 
 class RegistroIn(BaseModel):
@@ -300,7 +334,33 @@ async def recuperar_confirmar(d: ConfirmarIn, request: Request, bg: BackgroundTa
 def ver_cuenta(u: Usuario):
     return {**_publico(u), "creado": u["creado"], "ultimo_ingreso": u["ultimo_ingreso"],
             "clave_cambiada": u["clave_cambiada"], "sesiones": db.contar_sesiones(u["id"]),
-            "carpeta": f"/data/usuarios/{u['carpeta']}", "viajes": len(db.listar(u["id"])), **almacen.uso(u)}
+            "carpeta": f"/data/usuarios/{u['carpeta']}", "viajes": len(db.listar(u["id"])), **almacen.uso(u),
+            "resguardo": {**db.almacenamiento(), "ultimo_respaldo": respaldo.ultimo()}}
+
+
+def _armar_zip(u: dict) -> str:
+    """Zip con toda la carpeta del usuario y un datos.json con todos sus viajes."""
+    fd, destino = tempfile.mkstemp(suffix=".zip")
+    os.close(fd)
+    raiz = almacen.raiz(u)
+    viajes = [db.obtener(u["id"], v["id"]) for v in db.listar(u["id"])]
+    with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("datos.json", json.dumps({"usuario": u["usuario"], "correo": u["correo"],
+                                             "exportado": date.today().isoformat(), "viajes": viajes},
+                                            ensure_ascii=False, indent=2, default=str))
+        if raiz.is_dir():
+            for p in sorted(raiz.rglob("*")):
+                if p.is_file() and not p.name.endswith(".tmp"):
+                    z.write(p, p.relative_to(raiz).as_posix())
+    return destino
+
+
+@app.get("/api/cuenta/descargar")
+async def descargar_datos(u: Usuario):
+    destino = await asyncio.to_thread(_armar_zip, u)
+    nombre = f"calculadora-flete_{u['usuario']}_{date.today().isoformat()}.zip"
+    return FileResponse(destino, media_type="application/zip", filename=nombre,
+                        background=BackgroundTask(os.unlink, destino))
 
 
 class CambioClaveIn(BaseModel):

@@ -20,6 +20,7 @@ app/excel.py         Exportación a Excel (openpyxl)
 app/resumen.py       Cálculos del resumen mensual
 app/almacen.py       Archivos ordenados por usuario y por viaje en /data/usuarios
 app/cuentas.py       Contraseñas, límites de intentos y correo (Brevo)
+app/respaldo.py      Respaldos automáticos y restauración de la base
 app/db.py            Base de datos (PostgreSQL en Railway, SQLite en la compu)
 public/index.html    Interfaz
 requirements.txt     Librerías de Python
@@ -51,7 +52,7 @@ Cada persona entra con su usuario (o correo) y contraseña, y ve solo sus viajes
 
 | Variable | Para qué |
 |---|---|
-| `DATABASE_URL` | Base PostgreSQL. Poner `${{Postgres.DATABASE_URL}}`. **Sin esto los datos se borran en cada deploy.** |
+| `DATABASE_URL` | Opcional. Base PostgreSQL (`${{Postgres.DATABASE_URL}}`). Sin esta variable, la base es el archivo `/data/viajes.db` dentro del Volume. |
 | `CODIGO_INVITACION` | Código que hay que escribir para crear una cuenta. Sin esta variable no se pueden crear cuentas. |
 | `BREVO_API_KEY` | Clave de la API de Brevo para mandar los correos (recuperación de contraseña y avisos). |
 | `EMAIL_FROM` | Correo remitente, verificado en Brevo. |
@@ -63,9 +64,19 @@ Cada persona entra con su usuario (o correo) y contraseña, y ve solo sus viajes
 
 Sin Brevo configurado, los códigos de recuperación aparecen en los Deploy Logs (sirve para probar).
 
+## Resguardo de los datos
+
+- **Volume en `/data` (obligatorio)**: ahí quedan la base (`/data/viajes.db` si no usás PostgreSQL), los archivos de cada usuario y los respaldos. Todo sobrevive a los deploys.
+- **Respaldos automáticos** en `/data/respaldos/`: al arrancar, cada 5 minutos si hubo cambios y al apagar (Railway apaga el contenedor viejo en cada deploy). Se guardan los últimos 40, en `.json.gz`.
+- **Restauración automática**: si al arrancar la base está completamente vacía y hay respaldos, se restaura el último. Nunca pisa datos existentes. También sirve para pasar de SQLite a PostgreSQL: se configura `DATABASE_URL` con una base nueva y los datos se copian solos.
+- **Aviso**: si la base o los archivos no están en un lugar permanente, la app muestra un aviso arriba y lo detalla en *Mi cuenta → Resguardo de datos*.
+- **Descargar todos mis datos**: en *Mi cuenta*, un .zip con los viajes (`datos.json`), facturas y remitos en sus carpetas.
+
 ## Carpetas en el servidor
 
 ```
+/data/viajes.db                    base de datos (si no se usa PostgreSQL)
+/data/respaldos/                   respaldos automáticos de la base
 /data/usuarios/0001-juan/
   LEEME.txt  perfil.json
   viajes/2026-09/viaje-00015_2026-09-28_servagrop-hdo-s-a/

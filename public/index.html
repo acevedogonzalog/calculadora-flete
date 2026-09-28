@@ -288,6 +288,12 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
 @media (max-width:480px){.topr{width:100%}.topr .tabs{flex:1}.cuenta-btn{padding:4px}.cuenta-n{display:none}}
 .mono{font-family:var(--mono);font-size:13px;overflow-wrap:anywhere}
 
+.aviso-alm{background:var(--warn-soft);color:var(--warn);border:1px solid #E8D3A6;border-radius:10px;padding:12px 14px;
+  margin-bottom:16px;font-size:14px;line-height:1.45}
+.aviso-alm code{font-family:var(--mono);font-size:13px}
+.aviso-alm a{color:var(--warn);font-weight:500}
+.estado-ok{color:var(--accent);font-weight:500} .estado-mal{color:var(--neg);font-weight:500}
+
 /* Avisos */
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;
   background:var(--ink);color:#fff;border-radius:8px;padding:10px 14px;font-size:14px;display:flex;gap:14px;align-items:center;
@@ -369,6 +375,12 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
       </a>
     </div>
   </header>
+
+  <div class="aviso-alm" id="aviso-alm" role="alert" hidden>
+    <b>Atención: los datos no se están guardando de forma permanente.</b>
+    Se pueden borrar en el próximo deploy. En Railway, creá un Volume con mount path <code>/data</code>.
+    <a href="#cuenta">Ver detalle</a>
+  </div>
 
   <!-- ============ CALCULADORA ============ -->
   <section id="v-calc">
@@ -504,6 +516,9 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
     <div class="detail">
       <div class="stack">
         <div class="panel"><p class="label-sm">Datos</p><div id="cuenta-datos"><div class="loading">Cargando…</div></div></div>
+        <div class="panel"><p class="label-sm">Resguardo de datos</p><div id="cuenta-resguardo"></div>
+          <a class="btn" href="/api/cuenta/descargar" id="btn-descargar" style="margin-top:12px">Descargar todos mis datos (.zip)</a>
+          <p class="hint" style="margin:8px 0 0">Incluye tus viajes, facturas y fotos de remitos, ordenados en carpetas.</p></div>
         <div class="panel"><p class="label-sm">Sesiones</p>
           <p class="hint" id="cuenta-ses"></p>
           <button class="btn" type="button" id="btn-cerrar-otras">Cerrar sesión en los otros dispositivos</button></div>
@@ -1214,6 +1229,7 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
     $("v-login").hidden=true; $("v-main").hidden=false;
     if(cambio || !$("v-main").dataset.listo){ cargarBorrador(); $("v-main").dataset.listo="1"; }
     route(); actualizarContador();
+    api("/api/estado").then(function(e){ $("aviso-alm").hidden = e.almacenamiento_ok!==false; }).catch(function(){});
   }
 
   /* ---------- Mi cuenta ---------- */
@@ -1230,6 +1246,13 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
         '<dt>Viajes guardados</dt><dd>'+c.viajes+'</dd>'+
         '<dt>Archivos</dt><dd>'+c.archivos+' · '+tam(c.bytes)+'</dd>'+
         '<dt>Carpeta en el servidor</dt><dd class="mono">'+esc(c.carpeta)+'</dd></dl>';
+      var r=c.resguardo||{}, ult=r.ultimo_respaldo;
+      var marca=function(ok){ return ok?'<span class="estado-ok">Permanente</span>':'<span class="estado-mal">Temporal: se borra en cada deploy</span>'; };
+      $("cuenta-resguardo").innerHTML='<dl class="kv">'+
+        '<dt>Base de datos</dt><dd class="txt">'+marca(r.base_permanente)+'</dd>'+
+        '<dt>Archivos</dt><dd class="txt">'+marca(r.archivos_permanentes)+'</dd>'+
+        '<dt>Último respaldo automático</dt><dd class="txt">'+(ult?fechaHora(ult.fecha):"Todavía ninguno")+'</dd>'+
+        '<dt>Respaldos guardados</dt><dd>'+(ult?ult.cantidad:0)+'</dd></dl>';
       $("cuenta-ses").textContent = c.sesiones===1 ? "Tenés la sesión abierta solo en este dispositivo." :
         "Tenés la sesión abierta en "+c.sesiones+" dispositivos (contando este).";
       $("btn-cerrar-otras").hidden = c.sesiones<=1;

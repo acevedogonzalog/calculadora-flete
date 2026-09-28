@@ -254,3 +254,47 @@ def test_cambiar_contrasenia_cierra_otras_sesiones(app_lista):
     assert b.get("/api/viajes").status_code == 401    # la otra se cerró
     cuenta = a.get("/api/cuenta").json()
     assert cuenta["usuario"] == "fede" and cuenta["carpeta"].endswith("-fede") and cuenta["sesiones"] == 1
+
+
+# ---------------- Mantener la sesión iniciada ----------------
+
+def _vence(c):
+    from app import cuentas
+    h = cuentas.huella(c.cookies.get("cf_sesion"))
+    with db.engine.connect() as con:
+        v = con.execute(select(db.sesiones.c.vence).where(db.sesiones.c.id == h)).scalar_one()
+    return v if v.tzinfo else v.replace(tzinfo=db.ahora().tzinfo)
+
+
+def test_mantener_sesion_iniciada(app_lista):
+    reiniciar_limites()
+    c = nuevo()
+    r = c.post("/api/login", json={"usuario": "ana", "clave": CLAVE_ANA, "recordar": True})
+    assert "max-age=34560000" in r.headers["set-cookie"].lower()          # 400 días en el navegador
+    assert timedelta(days=89) < _vence(c) - db.ahora() <= timedelta(days=90)
+
+
+def test_sin_mantener_sesion(app_lista):
+    reiniciar_limites()
+    c = nuevo()
+    r = c.post("/api/login", json={"usuario": "ana", "clave": CLAVE_ANA, "recordar": False})
+    ck = r.headers["set-cookie"].lower()
+    assert "max-age" not in ck and "expires" not in ck                     # se borra al cerrar el navegador
+    assert _vence(c) - db.ahora() <= timedelta(hours=12)
+
+
+def test_la_sesion_se_renueva_mientras_se_usa(app_lista):
+    reiniciar_limites()
+    c = nuevo()
+    c.post("/api/login", json={"usuario": "ana", "clave": CLAVE_ANA, "recordar": True})
+    from app import cuentas
+    h = cuentas.huella(c.cookies.get("cf_sesion"))
+    with db.engine.begin() as con:   # como si hubiera entrado hace 80 días por última vez
+        con.execute(update(db.sesiones).where(db.sesiones.c.id == h).values(
+            vence=db.ahora() + timedelta(days=10), ultima_vez=db.ahora() - timedelta(days=80)))
+    assert c.get("/api/viajes").status_code == 200
+    assert _vence(c) - db.ahora() > timedelta(days=89)                     # renovada a 90 días
+
+
+def test_estado_indica_si_hay_cuentas(app_lista):
+    assert nuevo().get("/api/estado").json()["hay_usuarios"] is True

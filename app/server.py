@@ -153,12 +153,14 @@ def usuario_actual(request: Request) -> dict:
 Usuario = Annotated[dict, Depends(usuario_actual)]
 
 
-def _abrir_sesion(resp: Response, request: Request, u: dict) -> None:
+def _abrir_sesion(resp: Response, request: Request, u: dict, recordar: bool = True) -> None:
     token = cuentas.nuevo_token()
-    db.crear_sesion(u["id"], cuentas.huella(token), request.headers.get("user-agent", ""), _ip(request))
+    db.crear_sesion(u["id"], cuentas.huella(token), request.headers.get("user-agent", ""), _ip(request), recordar)
     db.marcar_ingreso(u["id"])
     https = request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
-    resp.set_cookie(COOKIE, token, max_age=db.DIAS_SESION * 24 * 3600, httponly=True,
+    # Con "Mantener la sesión iniciada" la cookie dura 400 días (el máximo de los navegadores) y el
+    # servidor la vence a los 90 días sin uso. Sin tildar: cookie de sesión (se borra al cerrar el navegador).
+    resp.set_cookie(COOKIE, token, max_age=400 * 24 * 3600 if recordar else None, httponly=True,
                     samesite="lax", secure=https, path="/")
 
 
@@ -177,6 +179,7 @@ def estado(request: Request):
     alm = db.almacenamiento()
     return {"autenticado": bool(u), **(_publico(u) if u else {}),
             "registro_abierto": bool(_invitacion()), "correo_activo": cuentas.correo_configurado(),
+            "hay_usuarios": db.hay_usuarios(),
             "almacenamiento_ok": alm["base_permanente"] and alm["archivos_permanentes"]}
 
 
@@ -185,6 +188,7 @@ class RegistroIn(BaseModel):
     correo: str = Field(max_length=200)
     clave: str = Field(max_length=128)
     codigo_invitacion: str = Field(max_length=100)
+    recordar: bool = True
 
 
 @app.post("/api/registro", status_code=201)
@@ -220,7 +224,7 @@ async def registro(d: RegistroIn, request: Request, bg: BackgroundTasks):
         if n:
             log.info("Se asignaron %d viajes anteriores a %s", n, u["usuario"])
     resp = JSONResponse(_publico(u), status_code=201)
-    _abrir_sesion(resp, request, u)
+    _abrir_sesion(resp, request, u, d.recordar)
     _correo_seguridad(bg, u, "Tu cuenta de Calculadora de Flete",
                       f"Hola {u['usuario']}:\n\nTu cuenta se creó correctamente. Entrás con tu usuario "
                       f"({u['usuario']}) o con este correo.\n\nSi no fuiste vos, respondé este correo.")
@@ -230,6 +234,7 @@ async def registro(d: RegistroIn, request: Request, bg: BackgroundTasks):
 class LoginIn(BaseModel):
     usuario: str = Field(max_length=200)   # usuario o correo
     clave: str = Field(max_length=200)
+    recordar: bool = True
 
 
 @app.post("/api/login")
@@ -246,7 +251,7 @@ async def login(d: LoginIn, request: Request):
         raise HTTPException(401, "Usuario o contraseña incorrectos.")
     cuentas.LOGIN_CUENTA.reiniciar(clave_cuenta)
     resp = JSONResponse(_publico(u))
-    _abrir_sesion(resp, request, u)
+    _abrir_sesion(resp, request, u, d.recordar)
     return resp
 
 

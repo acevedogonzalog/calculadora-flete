@@ -20,6 +20,8 @@ def test_javascript_sin_errores_de_sintaxis(tmp_path):
 
 def test_ids_unicos():
     import re
-    ids = re.findall(r'\sid="([^"]+)"', PAGINA.read_text(encoding="utf-8"))
+    html = PAGINA.read_text(encoding="utf-8")
+    html = html.split("<script>")[0] + html.split("</script>")[-1]   # solo el HTML, no el código
+    ids = re.findall(r'<[^>]*\sid="([^"]+)"', html)
     repetidos = {i for i in ids if ids.count(i) > 1}
     assert not repetidos, repetidos

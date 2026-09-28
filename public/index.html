@@ -261,8 +261,14 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
 .auth{max-width:400px;margin:6vh auto 0}
 .auth h1{margin:0 0 4px}
 .auth-sub{color:var(--muted);margin:0 0 18px}
-.auth-tabs{margin-bottom:16px}
-.auth-tabs a{flex:1;text-align:center}
+.auth-h{font-family:var(--display);font-size:19px;margin:0 0 2px}
+.check{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;user-select:none}
+.check input{width:18px;height:18px;accent-color:var(--accent);margin:0}
+.alt{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);
+  padding-top:14px;margin-top:4px;font-size:14px;color:var(--muted)}
+.alt .btn{padding:8px 14px}
+#sugerir-crear{background:var(--accent-soft);color:var(--ink);margin:0}
+#sugerir-crear a{color:var(--accent);font-weight:500}
 .authf{display:grid;gap:12px}
 .auth-p{margin:0;font-size:14px;color:var(--muted)}
 .auth-foot{font-size:12px;color:var(--muted);margin:14px 0 0;text-align:center}
@@ -307,23 +313,27 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
 <!-- ============ ACCESO: ingresar, crear cuenta, recuperar ============ -->
 <section class="app" id="v-login" hidden>
   <div class="auth">
-    <h1>Calculadora de Flete</h1>
+    <h1>Bienvenido a la Calculadora de Fletes</h1>
     <p class="auth-sub">Viajes, facturas y remitos de tu camión, en un solo lugar.</p>
     <div class="panel">
-      <div class="tabs auth-tabs" role="tablist">
-        <a href="#" role="tab" id="t-ingresar" aria-current="page">Ingresar</a>
-        <a href="#" role="tab" id="t-crear" aria-current="false">Crear cuenta</a>
-      </div>
+      <div class="msg err" id="auth-err" role="alert" style="margin:0 0 14px" hidden></div>
+      <div class="msg ok" id="auth-ok" role="status" style="margin:0 0 14px" hidden></div>
 
       <form id="f-ingresar" class="authf" novalidate>
+        <h2 class="auth-h">Ingresá a tu cuenta</h2>
         <div class="f"><label for="in-usuario">Usuario o correo</label><input id="in-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
         <div class="f"><label for="in-clave">Contraseña</label>
           <div class="pw"><input id="in-clave" type="password" autocomplete="current-password" required><button type="button" class="ver" aria-label="Mostrar contraseña">Ver</button></div></div>
+        <label class="check"><input type="checkbox" id="in-recordar" checked> Mantener la sesión iniciada</label>
         <button class="btn primary" type="submit">Ingresar</button>
         <a href="#" class="link" id="a-olvide">Olvidé mi contraseña</a>
+        <div class="msg" id="sugerir-crear" hidden>¿Todavía no tenés cuenta? <a href="#" id="a-sugerir-crear">Creala en un minuto</a>.</div>
+        <div class="alt" id="alt-crear"><span>¿Primera vez?</span><button type="button" class="btn" id="b-ir-crear">Crear cuenta</button></div>
       </form>
 
       <form id="f-crear" class="authf" novalidate hidden>
+        <h2 class="auth-h">Creá tu cuenta</h2>
+        <p class="auth-p" id="crear-intro" hidden>Todavía no hay ninguna cuenta: la primera que se cree recibe los viajes ya cargados.</p>
         <div class="f"><label for="cr-usuario">Usuario</label><input id="cr-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" required>
           <small class="fhint">Entre 3 y 30 caracteres: letras, números, punto o guion.</small></div>
         <div class="f"><label for="cr-correo">Correo</label><input id="cr-correo" type="email" autocomplete="email" autocapitalize="none" required>
@@ -335,10 +345,19 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
         <div class="f"><label for="cr-clave2">Repetí la contraseña</label><input id="cr-clave2" type="password" autocomplete="new-password" required></div>
         <div class="f"><label for="cr-inv">Código de invitación</label><input id="cr-inv" autocomplete="off" autocapitalize="none" required>
           <small class="fhint">Te lo pasa quien administra la app.</small></div>
+        <label class="check"><input type="checkbox" id="cr-recordar" checked> Mantener la sesión iniciada</label>
         <button class="btn primary" type="submit">Crear cuenta</button>
+        <div class="alt"><span>¿Ya tenés cuenta?</span><button type="button" class="btn volver-ingresar">Ingresar</button></div>
       </form>
 
+      <div id="registro-cerrado" class="authf" hidden>
+        <h2 class="auth-h">Creá tu cuenta</h2>
+        <p class="auth-p" id="cerrado-texto"></p>
+        <div class="alt"><span>¿Ya tenés cuenta?</span><button type="button" class="btn volver-ingresar">Ingresar</button></div>
+      </div>
+
       <form id="f-recuperar" class="authf" novalidate hidden>
+        <h2 class="auth-h">Recuperá tu contraseña</h2>
         <p class="auth-p">Escribí tu usuario o correo y te mandamos un código de 6 números para crear una contraseña nueva.</p>
         <div class="f"><label for="rc-usuario">Usuario o correo</label><input id="rc-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
         <button class="btn primary" type="submit">Enviar código</button>
@@ -346,6 +365,7 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
       </form>
 
       <form id="f-codigo" class="authf" novalidate hidden>
+        <h2 class="auth-h">Revisá tu correo</h2>
         <p class="auth-p" id="rc-msg"></p>
         <div class="f"><label for="rc-codigo">Código</label><input id="rc-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="7" class="codigo" required></div>
         <div class="f"><label for="rc-clave">Contraseña nueva</label>
@@ -355,8 +375,6 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
         <a href="#" class="link" id="a-reenviar">No me llegó: pedir otro código</a>
       </form>
 
-      <div class="msg err" id="auth-err" role="alert" hidden></div>
-      <div class="msg ok" id="auth-ok" role="status" hidden></div>
     </div>
     <p class="auth-foot">Tus datos y archivos se guardan separados de los de otros usuarios. Las contraseñas se guardan cifradas.</p>
   </div>
@@ -1124,18 +1142,22 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
   }
 
   /* ---------- Acceso: ingresar, crear cuenta, recuperar ---------- */
-  var FORMS=["f-ingresar","f-crear","f-recuperar","f-codigo"], recUsuario="";
+  var FORMS=["f-ingresar","f-crear","registro-cerrado","f-recuperar","f-codigo"], recUsuario="", estadoAcceso={};
+  var YA_KEY="cf-ya-ingreso";   // marca que este navegador ya usó la app (para saber si es alguien nuevo)
+  var modoElegido=false;
   function modo(id){
+    modoElegido=true;
+    if(id==="f-crear" && estadoAcceso.registro_abierto===false) id="registro-cerrado";
     FORMS.forEach(function(f){ $(f).hidden = f!==id; });
-    $("t-ingresar").setAttribute("aria-current", id==="f-ingresar"?"page":"false");
-    $("t-crear").setAttribute("aria-current", id==="f-crear"?"page":"false");
-    $("auth-err").hidden=true; $("auth-ok").hidden=true;
-    var primero=$(id).querySelector("input:not([hidden])"); if(primero) setTimeout(function(){ primero.focus(); },0);
+    $("auth-err").hidden=true; $("auth-ok").hidden=true; $("sugerir-crear").hidden=true;
+    var primero=$(id).querySelector("input:not([type=checkbox])"); if(primero) setTimeout(function(){ primero.focus(); },0);
   }
   function authErr(t){ var e=$("auth-err"); e.textContent=t; e.hidden=false; $("auth-ok").hidden=true; }
   function authOk(t){ var e=$("auth-ok"); e.textContent=t; e.hidden=false; $("auth-err").hidden=true; }
   function postJSON(url, body){ return api(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}); }
   function ocupado(form, si){ var b=form.querySelector("button[type=submit]"); b.disabled=si; if(si){ b.dataset.t=b.textContent; b.textContent="Un momento…"; } else if(b.dataset.t){ b.textContent=b.dataset.t; } }
+  function marcarYaIngreso(){ try{ localStorage.setItem(YA_KEY,"1"); }catch(e){} }
+  function yaIngreso(){ try{ return localStorage.getItem(YA_KEY)==="1"; }catch(e){ return false; } }
 
   // Fuerza de la contraseña (orientativa; la regla real la aplica el servidor)
   function fuerza(pw){
@@ -1157,8 +1179,11 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
     b.addEventListener("click",function(){ var i=b.previousElementSibling, ver=i.type==="password"; i.type=ver?"text":"password"; b.textContent=ver?"Ocultar":"Ver"; });
   });
 
-  $("t-ingresar").addEventListener("click",function(e){ e.preventDefault(); modo("f-ingresar"); });
-  $("t-crear").addEventListener("click",function(e){ e.preventDefault(); modo("f-crear"); });
+  $("b-ir-crear").addEventListener("click",function(){ modo("f-crear"); });
+  $("a-sugerir-crear").addEventListener("click",function(e){
+    e.preventDefault(); var dato=$("in-usuario").value.trim(); modo("f-crear");
+    if(dato.indexOf("@")>0) $("cr-correo").value=dato; else if(dato) $("cr-usuario").value=dato.toLowerCase();
+  });
   $("a-olvide").addEventListener("click",function(e){ e.preventDefault(); $("rc-usuario").value=$("in-usuario").value; modo("f-recuperar"); });
   document.querySelectorAll(".volver-ingresar").forEach(function(a){ a.addEventListener("click",function(e){ e.preventDefault(); modo("f-ingresar"); }); });
   $("a-reenviar").addEventListener("click",function(e){ e.preventDefault(); $("rc-usuario").value=recUsuario; modo("f-recuperar"); });
@@ -1167,9 +1192,13 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
     e.preventDefault(); var f=this;
     if(!$("in-usuario").value.trim() || !$("in-clave").value){ authErr("Completá usuario y contraseña."); return; }
     ocupado(f,true);
-    postJSON("/api/login",{usuario:$("in-usuario").value.trim(), clave:$("in-clave").value})
+    postJSON("/api/login",{usuario:$("in-usuario").value.trim(), clave:$("in-clave").value, recordar:$("in-recordar").checked})
       .then(function(u){ $("in-clave").value=""; showMain(u); })
-      .catch(function(err){ authErr(err.message); $("in-clave").select(); })
+      .catch(function(err){
+        authErr(err.message); $("in-clave").select();
+        // Sin revelar si la cuenta existe: se ofrece crearla a quien quizás todavía no tiene
+        if(estadoAcceso.registro_abierto && /incorrectos/.test(err.message)) $("sugerir-crear").hidden=false;
+      })
       .finally(function(){ ocupado(f,false); });
   });
 
@@ -1179,7 +1208,7 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
     if($("cr-clave").value.length<8){ authErr("La contraseña tiene que tener al menos 8 caracteres."); return; }
     ocupado(f,true);
     postJSON("/api/registro",{usuario:$("cr-usuario").value.trim(), correo:$("cr-correo").value.trim(),
-      clave:$("cr-clave").value, codigo_invitacion:$("cr-inv").value.trim()})
+      clave:$("cr-clave").value, codigo_invitacion:$("cr-inv").value.trim(), recordar:$("cr-recordar").checked})
       .then(function(u){ ["cr-clave","cr-clave2","cr-inv"].forEach(function(i){ $(i).value=""; }); showMain(u); toast("Cuenta creada. ¡Bienvenido, "+esc(u.usuario)+"!"); })
       .catch(function(err){ authErr(err.message); })
       .finally(function(){ ocupado(f,false); });
@@ -1207,8 +1236,14 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
 
   function showLogin(estado){
     $("v-main").hidden=true; $("v-login").hidden=false;
-    if(estado && !estado.registro_abierto){ $("t-crear").hidden=true; }
-    if($("f-ingresar").hidden && $("f-crear").hidden && $("f-recuperar").hidden && $("f-codigo").hidden) modo("f-ingresar");
+    if(estado) estadoAcceso=estado;
+    var e=estadoAcceso;
+    $("crear-intro").hidden = e.hay_usuarios!==false;
+    $("cerrado-texto").textContent = e.hay_usuarios===false
+      ? "Todavía no hay ninguna cuenta. Para crear la primera, quien administra la app tiene que definir la variable CODIGO_INVITACION en Railway."
+      : "Para crear una cuenta hace falta un código de invitación. Pedíselo a quien administra la app.";
+    // ¿Alguien nuevo? Si no hay ninguna cuenta, o este navegador nunca entró, se abre "Crear cuenta"
+    if(!modoElegido) modo(e.hay_usuarios===false || !yaIngreso() ? "f-crear" : "f-ingresar");
   }
 
   function cargarBorrador(){
@@ -1222,6 +1257,7 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
   }
 
   function showMain(u){
+    marcarYaIngreso();
     var cambio = usuarioActual && usuarioActual!==u.usuario;
     usuarioActual=u.usuario; viajesCache=null; resumenActual=null;
     $("cuenta-nombre").textContent=u.usuario; $("avatar").textContent=u.usuario.charAt(0);

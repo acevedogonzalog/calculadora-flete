@@ -95,3 +95,13 @@ def test_registro_cerrado_sin_codigo_configurado():
     finally:
         p.terminate()
         p.wait(5)
+
+
+def test_instalacion_nueva_sin_cuentas():
+    p, base = _levantar(CODIGO_INVITACION="xyz")
+    try:
+        e = httpx.get(base + "/api/estado").json()
+        assert e["hay_usuarios"] is False and e["registro_abierto"] is True
+    finally:
+        p.terminate()
+        p.wait(5)

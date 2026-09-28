@@ -88,6 +88,7 @@ sesiones = Table(
     Column("ultima_vez", DateTime(timezone=True), nullable=False),
     Column("agente", String(200), default=""),
     Column("ip", String(64), default=""),
+    Column("recordar", Boolean, default=True),           # "Mantener la sesión iniciada"
 )
 
 codigos = Table(
@@ -156,7 +157,7 @@ def _migrar() -> None:
     """Agrega columnas nuevas a tablas que ya existían y agranda las que quedaron cortas (sin borrar datos)."""
     insp = inspect(engine)
     with engine.begin() as con:
-        for tabla in (viajes, remitos):
+        for tabla in (viajes, remitos, sesiones):
             actuales = {c["name"]: c for c in insp.get_columns(tabla.name)}
             for col in tabla.columns:
                 tipo = col.type.compile(dialect=engine.dialect)
@@ -177,6 +178,11 @@ def _fila(r) -> dict:
 
 
 # ---------------- Usuarios ----------------
+
+def hay_usuarios() -> bool:
+    with engine.connect() as con:
+        return con.execute(select(usuarios.c.id).limit(1)).first() is not None
+
 
 def contar_usuarios() -> int:
     with engine.connect() as con:
@@ -226,14 +232,21 @@ def marcar_ingreso(uid: int) -> None:
 
 # ---------------- Sesiones ----------------
 
-DIAS_SESION = 30
 
 
-def crear_sesion(uid: int, token_hash: str, agente: str, ip: str) -> datetime:
-    vence = ahora() + timedelta(days=DIAS_SESION)
+DIAS_RECORDAR = 90            # con "Mantener la sesión iniciada": 90 días desde el último uso
+HORAS_SIN_RECORDAR = 12       # sin tildar: se cierra al cerrar el navegador o a las 12 horas
+
+
+def _duracion(recordar: bool) -> timedelta:
+    return timedelta(days=DIAS_RECORDAR) if recordar else timedelta(hours=HORAS_SIN_RECORDAR)
+
+
+def crear_sesion(uid: int, token_hash: str, agente: str, ip: str, recordar: bool = True) -> datetime:
+    vence = ahora() + _duracion(recordar)
     with engine.begin() as con:
         con.execute(insert(sesiones).values(id=token_hash, usuario_id=uid, creada=ahora(), vence=vence,
-                                            ultima_vez=ahora(), agente=agente[:200], ip=ip[:64]))
+                                            ultima_vez=ahora(), agente=agente[:200], ip=ip[:64], recordar=recordar))
     return vence
 
 
@@ -249,7 +262,10 @@ def usuario_de_sesion(token_hash: str) -> dict | None:
             return None
         ultima = s["ultima_vez"] if s["ultima_vez"].tzinfo else s["ultima_vez"].replace(tzinfo=timezone.utc)
         if ahora() - ultima > timedelta(minutes=5):   # no escribir en cada pedido
-            con.execute(update(sesiones).where(sesiones.c.id == token_hash).values(ultima_vez=ahora()))
+            # Vencimiento "deslizante": mientras se use la app, la sesión se renueva sola
+            recordar = s.get("recordar") is not False
+            con.execute(update(sesiones).where(sesiones.c.id == token_hash).values(
+                ultima_vez=ahora(), vence=max(vence, ahora() + _duracion(recordar))))
         u = con.execute(select(usuarios).where(and_(usuarios.c.id == s["usuario_id"], usuarios.c.activo))).first()
         return _fila(u) if u else None
 

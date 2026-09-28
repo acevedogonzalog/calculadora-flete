@@ -43,7 +43,8 @@ Sin `DATABASE_URL` guarda los viajes en el archivo `viajes.db`.
 
 Cada persona entra con su usuario (o correo) y contraseña, y ve solo sus viajes, facturas y remitos.
 
-- **Crear cuenta**: usuario, correo, contraseña y el código de invitación (`CODIGO_INVITACION`).
+- **Crear cuenta**: usuario, correo, contraseña y el código de invitación (`CODIGO_INVITACION`). Si todavía no hay ninguna cuenta, o si es la primera vez que se entra desde ese navegador, la app abre directamente "Crear cuenta".
+- **Mantener la sesión iniciada** (tildado por defecto): no vuelve a pedir la contraseña mientras se use la app al menos una vez cada 90 días. Sin tildar, la sesión se cierra al cerrar el navegador (o a las 12 horas).
 - **Olvidé mi contraseña**: llega un código de 6 números al correo (vence en 15 minutos, 5 intentos).
 - **Mi cuenta**: datos, cambiar contraseña, cerrar sesión en los otros dispositivos, carpeta y espacio usado.
 - La primera cuenta que se crea recibe los viajes cargados antes de que existieran las cuentas.

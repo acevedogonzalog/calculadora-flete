@@ -34,5 +34,3 @@ También se puede abrir `public/index.html` directamente en el navegador.
 3. En **Settings → Networking → Generate Domain** para obtener la dirección pública.
 
 Cada `git push` a la rama principal vuelve a desplegar la app automáticamente.
-# calculadora-flete
-# calculadora-flete

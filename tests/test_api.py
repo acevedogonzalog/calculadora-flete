@@ -16,8 +16,9 @@ def crear(client, **cambios):
 
 # ---------------- Uso normal ----------------
 
-def test_estado_sin_clave(client):
-    assert client.get("/api/estado").json() == {"requiere_clave": False, "autenticado": True}
+def test_estado_con_sesion(client):
+    e = client.get("/api/estado").json()
+    assert e["autenticado"] is True and e["usuario"] == "ana" and e["registro_abierto"] is True
 
 
 def test_pagina_principal(client):
@@ -32,7 +33,7 @@ def test_factura_real_se_lee_y_se_guarda(client, factura_pdf):
     assert d["toneladas"] == 28 and d["precio_tn"] == 54049 and d["importe_total"] == 1513372
     assert d["cliente"] == "SERVAGROP HDO S. A." and d["fecha"] == "2026-09-28"
     assert d["factura_nro"] == "00001-00000106" and d["cae"] == "86395043581706"
-    assert d["factura_archivo"].endswith(".pdf") and d["avisos"] == []
+    assert d["factura_archivo"].startswith("pendientes/factura-") and d["avisos"] == []
 
 
 def test_calculo_del_viaje(client):
@@ -51,11 +52,13 @@ def test_viaje_con_factura_y_remitos_completo(client, factura_pdf):
     assert v["remitos_cant"] == 2
     pdf = client.get(f"/api/viajes/{v['id']}/factura")
     assert pdf.status_code == 200 and pdf.content == factura_pdf
-    foto = client.get(f"/api/remitos/archivo/{r1['archivo']}")
+    foto = client.get(f"/api/archivos/{v['remitos'][0]['archivo']}")
     from PIL import Image
     im = Image.open(io.BytesIO(foto.content))
     assert im.size == (1800, 2400)  # enderezada (EXIF 6) y reducida
-    assert client.get(f"/api/remitos/archivo/{r1['miniatura']}").status_code == 200
+    assert client.get(f"/api/archivos/{v['remitos'][0]['miniatura']}").status_code == 200
+    # los archivos pendientes ya no se pueden pedir: se movieron a la carpeta del viaje
+    assert client.get(f"/api/archivos/{r1['archivo']}").status_code == 404
 
 
 def test_exportaciones_excel(client):
@@ -165,12 +168,13 @@ def test_bomba_de_descompresion(client):
 
 @pytest.mark.parametrize("nombre", [
     "..%2F..%2Fetc%2Fpasswd", "..%2Ftest.db", "%2Fetc%2Fpasswd", "x.jpg%00.pdf",
-    "..%5C..%5Cwindows", "remito.jpg%2F..%2F..%2Ftest.db",
+    "..%5C..%5Cwindows", "remito.jpg%2F..%2F..%2Ftest.db", "..%2F..%2F.secret_key", "..%2F0002-beto%2Fperfil.json",
+    "perfil.json", "LEEME.txt",
 ])
-def test_path_traversal_en_remitos(client, nombre):
-    r = client.get(f"/api/remitos/archivo/{nombre}")
+def test_path_traversal_en_archivos(client, nombre):
+    r = client.get(f"/api/archivos/{nombre}")
     assert r.status_code == 404
-    assert b"root:" not in r.content and b"SQLite" not in r.content
+    assert b"root:" not in r.content and b"SQLite" not in r.content and b"usuario" not in r.content
 
 
 def test_path_traversal_en_pagina(client):
@@ -228,3 +232,14 @@ def test_subida_con_content_length_enorme(client):
     r = client.post("/api/remitos", content=b"x", headers={
         "content-type": "multipart/form-data; boundary=abc", "content-length": str(500 * 1024 * 1024)})
     assert r.status_code == 413
+
+
+def test_pedido_desde_otro_sitio_se_rechaza(client):
+    """Protección CSRF: una página ajena no puede hacer que tu navegador borre o cree viajes."""
+    r = client.post("/api/viajes", json=VIAJE_OK, headers={"origin": "https://sitio-malo.com"})
+    assert r.status_code == 403
+    v = crear(client)
+    assert client.delete(f"/api/viajes/{v['id']}", headers={"origin": "https://sitio-malo.com"}).status_code == 403
+    assert client.get(f"/api/viajes/{v['id']}").status_code == 200
+    # desde la propia página sí
+    assert client.post("/api/viajes", json=VIAJE_OK, headers={"origin": "http://testserver"}).status_code == 201

@@ -18,7 +18,8 @@ app/server.py        API (FastAPI) y página
 app/factura.py       Lectura de la factura PDF (pdfplumber)
 app/excel.py         Exportación a Excel (openpyxl)
 app/resumen.py       Cálculos del resumen mensual
-app/almacen.py       Guardado de facturas (/data/facturas) y fotos de remitos (/data/remitos)
+app/almacen.py       Archivos ordenados por usuario y por viaje en /data/usuarios
+app/cuentas.py       Contraseñas, límites de intentos y correo (Brevo)
 app/db.py            Base de datos (PostgreSQL en Railway, SQLite en la compu)
 public/index.html    Interfaz
 requirements.txt     Librerías de Python
@@ -37,15 +38,43 @@ python main.py
 
 Sin `DATABASE_URL` guarda los viajes en el archivo `viajes.db`.
 
+## Cuentas de usuario
+
+Cada persona entra con su usuario (o correo) y contraseña, y ve solo sus viajes, facturas y remitos.
+
+- **Crear cuenta**: usuario, correo, contraseña y el código de invitación (`CODIGO_INVITACION`).
+- **Olvidé mi contraseña**: llega un código de 6 números al correo (vence en 15 minutos, 5 intentos).
+- **Mi cuenta**: datos, cambiar contraseña, cerrar sesión en los otros dispositivos, carpeta y espacio usado.
+- La primera cuenta que se crea recibe los viajes cargados antes de que existieran las cuentas.
+
 ## Variables en Railway
 
 | Variable | Para qué |
 |---|---|
-| `DATABASE_URL` | Base PostgreSQL donde se guardan los viajes. Poner `${{Postgres.DATABASE_URL}}`. **Sin esto los viajes se borran en cada despliegue.** |
-| `APP_PASSWORD` | Opcional pero recomendado. Si está definida, la app pide esta clave para entrar. |
-| `DATA_DIR` | Opcional. Carpeta base de los archivos; por defecto `/data` (facturas en `/data/facturas`, remitos en `/data/remitos`). |
+| `DATABASE_URL` | Base PostgreSQL. Poner `${{Postgres.DATABASE_URL}}`. **Sin esto los datos se borran en cada deploy.** |
+| `CODIGO_INVITACION` | Código que hay que escribir para crear una cuenta. Sin esta variable no se pueden crear cuentas. |
+| `BREVO_API_KEY` | Clave de la API de Brevo para mandar los correos (recuperación de contraseña y avisos). |
+| `EMAIL_FROM` | Correo remitente, verificado en Brevo. |
+| `EMAIL_FROM_NAME` | Opcional. Nombre del remitente (por defecto "Calculadora de Flete"). |
+| `SECRET_KEY` | Opcional. Si no está, se genera una sola vez y se guarda en `/data/.secret_key`. |
+| `DATA_DIR` | Opcional. Carpeta base de los archivos; por defecto `/data`. |
 
-**Volume para las facturas:** en Railway, `Ctrl+K → Create Volume`, elegir el servicio `calculadora-flete` y poner como mount path `/data`. Sin el Volume, las facturas y las fotos de remitos se borran en cada deploy (la app lo avisa en los Deploy Logs).
+**Volume**: en Railway, `Ctrl+K → Create Volume`, servicio `calculadora-flete`, mount path `/data`.
+
+Sin Brevo configurado, los códigos de recuperación aparecen en los Deploy Logs (sirve para probar).
+
+## Carpetas en el servidor
+
+```
+/data/usuarios/0001-juan/
+  LEEME.txt  perfil.json
+  viajes/2026-09/viaje-00015_2026-09-28_servagrop-hdo-s-a/
+      viaje.json                   todos los datos del viaje (respaldo legible)
+      factura_00001-00000106.pdf
+      remito-01.jpg  remito-01.mini.jpg
+  pendientes/                      subidos antes de guardar el viaje
+  eliminados/                      viajes eliminados (se mueven acá, no se borran)
+```
 
 ## Facturas
 
@@ -53,10 +82,16 @@ El lector está pensado para la factura C que genera ARCA (Comprobantes en líne
 
 ## Seguridad
 
-- **Clave de acceso** (`APP_PASSWORD`): sin ella, cualquiera con la dirección puede ver y borrar viajes; la app lo avisa en los Deploy Logs. La sesión dura 90 días; si se cambia la clave se cierran todas las sesiones. Después de 8 intentos fallidos desde una misma conexión (o 40 en total) el ingreso se bloquea 15 minutos. Las sesiones abiertas no se ven afectadas.
-- **Archivos subidos**: solo PDF e imágenes, con tamaño máximo (10 MB facturas, 25 MB fotos). Las imágenes gigantes que buscan agotar la memoria se rechazan. Los nombres de archivo se validan, así que no se puede pedir un archivo fuera de `/data`.
-- **Datos**: los números tienen topes y no aceptan valores infinitos. Los textos que empiezan con `=` `+` `-` `@` se exportan a Excel como texto, nunca como fórmula.
-- **Cabeceras**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy` y `Referrer-Policy`. La API responde con `Cache-Control: no-store`.
+- **Contraseñas** guardadas con scrypt (nunca en texto). Mínimo 8 caracteres, sin claves comunes ni el nombre de usuario.
+- **Sesiones** del lado del servidor: en la base solo se guarda el hash del token. Duran 30 días, se pueden cerrar desde "Mi cuenta" y se cierran todas al recuperar la contraseña.
+- **Límite de intentos**: 8 fallos por cuenta o 10 por conexión cada 15 minutos; registro y pedidos de código también limitados.
+- **Recuperación**: la respuesta es la misma exista o no la cuenta (no revela usuarios). El código se guarda como hash, vence en 15 minutos y se anula después de 5 intentos.
+- **Avisos por correo** al crear la cuenta y cada vez que se cambia la contraseña.
+- **Aislamiento**: cada consulta filtra por usuario y cada archivo se busca solo dentro de la carpeta del usuario.
+- **Pedidos desde otros sitios** (CSRF) rechazados; cookie `HttpOnly`, `SameSite=Lax` y `Secure` en HTTPS.
+- **Archivos subidos**: solo PDF e imágenes, con tamaño máximo; imágenes gigantes que buscan agotar la memoria se rechazan.
+- **Excel**: los textos que empiezan con `=` `+` `-` `@` se exportan como texto, nunca como fórmula.
+- **Cabeceras**: `nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy`, `Referrer-Policy`; la API no se guarda en caché.
 
 ## Tests
 
@@ -66,4 +101,4 @@ pytest                      # con SQLite
 TEST_DATABASE_URL=postgresql://usuario@host:5432/base_de_prueba pytest   # con PostgreSQL
 ```
 
-Cubren el uso normal (factura, remitos, viajes, resumen y Excel), datos inválidos o extremos, archivos maliciosos, intentos de acceder a archivos fuera de la carpeta, inyección de fórmulas en Excel, cabeceras de seguridad y la clave de acceso.
+Cubren cuentas (registro, ingreso, recuperación, cambio de contraseña, sesiones), aislamiento entre usuarios, carpetas ordenadas, factura, remitos, viajes, resumen y Excel, datos inválidos o extremos, archivos maliciosos, acceso a archivos fuera de la carpeta, inyección de fórmulas, CSRF, cabeceras de seguridad y el JavaScript de la página.

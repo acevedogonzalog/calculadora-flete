@@ -257,11 +257,38 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
 .doc.off svg{color:var(--muted)}
 @media (max-width:480px){.docgrid{grid-template-columns:1fr 1fr}.doc{padding:10px;gap:8px}}
 
-/* Login y avisos */
-.login{max-width:360px;margin:12vh auto 0}
-.login h1{margin-bottom:6px}
-.login p{color:var(--muted);margin:0 0 16px}
-.login form{display:grid;gap:10px}
+/* Acceso y cuenta */
+.auth{max-width:400px;margin:6vh auto 0}
+.auth h1{margin:0 0 4px}
+.auth-sub{color:var(--muted);margin:0 0 18px}
+.auth-tabs{margin-bottom:16px}
+.auth-tabs a{flex:1;text-align:center}
+.authf{display:grid;gap:12px}
+.auth-p{margin:0;font-size:14px;color:var(--muted)}
+.auth-foot{font-size:12px;color:var(--muted);margin:14px 0 0;text-align:center}
+.fhint{display:block;font-size:12px;color:var(--muted);margin-top:4px}
+.link{color:var(--accent);font-size:14px;text-align:center;text-decoration:none}
+.link:hover{text-decoration:underline}
+.pw{display:flex;gap:6px}
+.pw input{flex:1;min-width:0}
+.pw .ver{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:0 10px;font-size:13px;color:var(--muted);cursor:pointer}
+.codigo{font:500 22px var(--mono)!important;letter-spacing:.3em;text-align:center}
+.fuerza{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.fuerza i{height:4px;border-radius:2px;background:var(--line)}
+.fuerza[data-n="1"] i:nth-child(-n+1){background:var(--neg)}
+.fuerza[data-n="2"] i:nth-child(-n+2){background:var(--c-gasoil)}
+.fuerza[data-n="3"] i:nth-child(-n+3){background:var(--c-gan)}
+.fuerza[data-n="4"] i{background:var(--c-gan)}
+.topr{display:flex;align-items:center;gap:10px}
+.cuenta-btn{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:var(--surface);
+  border-radius:20px;padding:4px 12px 4px 4px;font-size:14px;max-width:180px}
+.cuenta-btn[aria-current="page"]{border-color:var(--accent)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font:500 13px var(--body);flex:none;text-transform:uppercase}
+.cuenta-n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:480px){.topr{width:100%}.topr .tabs{flex:1}.cuenta-btn{padding:4px}.cuenta-n{display:none}}
+.mono{font-family:var(--mono);font-size:13px;overflow-wrap:anywhere}
+
+/* Avisos */
 .toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;
   background:var(--ink);color:#fff;border-radius:8px;padding:10px 14px;font-size:14px;display:flex;gap:14px;align-items:center;
   box-shadow:0 8px 24px rgba(0,0,0,.18);max-width:calc(100% - 32px)}
@@ -271,26 +298,76 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
 </head>
 <body>
 
-<!-- Ingreso con clave (solo si APP_PASSWORD está configurada) -->
+<!-- ============ ACCESO: ingresar, crear cuenta, recuperar ============ -->
 <section class="app" id="v-login" hidden>
-  <div class="login panel">
+  <div class="auth">
     <h1>Calculadora de Flete</h1>
-    <p>Ingresá la clave para ver y guardar viajes.</p>
-    <form id="login-form">
-      <div class="f"><label for="login-clave">Clave</label><input id="login-clave" type="password" autocomplete="current-password" required></div>
-      <button class="btn primary" type="submit">Ingresar</button>
-      <div class="msg err" id="login-err" hidden></div>
-    </form>
+    <p class="auth-sub">Viajes, facturas y remitos de tu camión, en un solo lugar.</p>
+    <div class="panel">
+      <div class="tabs auth-tabs" role="tablist">
+        <a href="#" role="tab" id="t-ingresar" aria-current="page">Ingresar</a>
+        <a href="#" role="tab" id="t-crear" aria-current="false">Crear cuenta</a>
+      </div>
+
+      <form id="f-ingresar" class="authf" novalidate>
+        <div class="f"><label for="in-usuario">Usuario o correo</label><input id="in-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+        <div class="f"><label for="in-clave">Contraseña</label>
+          <div class="pw"><input id="in-clave" type="password" autocomplete="current-password" required><button type="button" class="ver" aria-label="Mostrar contraseña">Ver</button></div></div>
+        <button class="btn primary" type="submit">Ingresar</button>
+        <a href="#" class="link" id="a-olvide">Olvidé mi contraseña</a>
+      </form>
+
+      <form id="f-crear" class="authf" novalidate hidden>
+        <div class="f"><label for="cr-usuario">Usuario</label><input id="cr-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30" required>
+          <small class="fhint">Entre 3 y 30 caracteres: letras, números, punto o guion.</small></div>
+        <div class="f"><label for="cr-correo">Correo</label><input id="cr-correo" type="email" autocomplete="email" autocapitalize="none" required>
+          <small class="fhint">Lo usamos para recuperar la contraseña y avisarte cambios en la cuenta.</small></div>
+        <div class="f"><label for="cr-clave">Contraseña</label>
+          <div class="pw"><input id="cr-clave" type="password" autocomplete="new-password" required><button type="button" class="ver" aria-label="Mostrar contraseña">Ver</button></div>
+          <div class="fuerza" id="cr-fuerza" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <small class="fhint" id="cr-fuerza-t">Mínimo 8 caracteres. Mejor si mezclás palabras y números.</small></div>
+        <div class="f"><label for="cr-clave2">Repetí la contraseña</label><input id="cr-clave2" type="password" autocomplete="new-password" required></div>
+        <div class="f"><label for="cr-inv">Código de invitación</label><input id="cr-inv" autocomplete="off" autocapitalize="none" required>
+          <small class="fhint">Te lo pasa quien administra la app.</small></div>
+        <button class="btn primary" type="submit">Crear cuenta</button>
+      </form>
+
+      <form id="f-recuperar" class="authf" novalidate hidden>
+        <p class="auth-p">Escribí tu usuario o correo y te mandamos un código de 6 números para crear una contraseña nueva.</p>
+        <div class="f"><label for="rc-usuario">Usuario o correo</label><input id="rc-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required></div>
+        <button class="btn primary" type="submit">Enviar código</button>
+        <a href="#" class="link volver-ingresar">Volver a ingresar</a>
+      </form>
+
+      <form id="f-codigo" class="authf" novalidate hidden>
+        <p class="auth-p" id="rc-msg"></p>
+        <div class="f"><label for="rc-codigo">Código</label><input id="rc-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="7" class="codigo" required></div>
+        <div class="f"><label for="rc-clave">Contraseña nueva</label>
+          <div class="pw"><input id="rc-clave" type="password" autocomplete="new-password" required><button type="button" class="ver" aria-label="Mostrar contraseña">Ver</button></div></div>
+        <div class="f"><label for="rc-clave2">Repetí la contraseña nueva</label><input id="rc-clave2" type="password" autocomplete="new-password" required></div>
+        <button class="btn primary" type="submit">Cambiar contraseña</button>
+        <a href="#" class="link" id="a-reenviar">No me llegó: pedir otro código</a>
+      </form>
+
+      <div class="msg err" id="auth-err" role="alert" hidden></div>
+      <div class="msg ok" id="auth-ok" role="status" hidden></div>
+    </div>
+    <p class="auth-foot">Tus datos y archivos se guardan separados de los de otros usuarios. Las contraseñas se guardan cifradas.</p>
   </div>
 </section>
 
 <div class="app" id="v-main" hidden>
   <header class="top">
     <h1>Calculadora de Flete</h1>
-    <nav class="tabs" aria-label="Secciones">
-      <a href="#calculadora" id="tab-calc">Calculadora</a>
-      <a href="#viajes" id="tab-viajes">Viajes<span class="n" id="tab-count"></span></a>
-    </nav>
+    <div class="topr">
+      <nav class="tabs" aria-label="Secciones">
+        <a href="#calculadora" id="tab-calc">Calculadora</a>
+        <a href="#viajes" id="tab-viajes">Viajes<span class="n" id="tab-count"></span></a>
+      </nav>
+      <a href="#cuenta" class="cuenta-btn" id="tab-cuenta" aria-label="Mi cuenta">
+        <span class="avatar" id="avatar" aria-hidden="true"></span><span class="cuenta-n" id="cuenta-nombre"></span>
+      </a>
+    </div>
   </header>
 
   <!-- ============ CALCULADORA ============ -->
@@ -419,6 +496,32 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
     <div id="detalle-body"><div class="loading">Cargando…</div></div>
   </section>
 
+  <!-- ============ MI CUENTA ============ -->
+  <section id="v-cuenta" hidden>
+    <a class="back" href="#calculadora">← Volver</a>
+    <div class="rhead"><h2>Mi cuenta</h2>
+      <div class="actions"><button class="btn" type="button" id="btn-salir">Cerrar sesión</button></div></div>
+    <div class="detail">
+      <div class="stack">
+        <div class="panel"><p class="label-sm">Datos</p><div id="cuenta-datos"><div class="loading">Cargando…</div></div></div>
+        <div class="panel"><p class="label-sm">Sesiones</p>
+          <p class="hint" id="cuenta-ses"></p>
+          <button class="btn" type="button" id="btn-cerrar-otras">Cerrar sesión en los otros dispositivos</button></div>
+      </div>
+      <form class="panel authf" id="f-clave" novalidate>
+        <p class="label-sm">Cambiar contraseña</p>
+        <input type="text" autocomplete="username" id="cc-user" hidden>
+        <div class="f"><label for="cc-actual">Contraseña actual</label><input id="cc-actual" type="password" autocomplete="current-password" required></div>
+        <div class="f"><label for="cc-nueva">Contraseña nueva</label><input id="cc-nueva" type="password" autocomplete="new-password" required>
+          <div class="fuerza" id="cc-fuerza" aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
+        <div class="f"><label for="cc-nueva2">Repetí la contraseña nueva</label><input id="cc-nueva2" type="password" autocomplete="new-password" required></div>
+        <button class="btn primary" type="submit">Cambiar contraseña</button>
+        <p class="hint" style="margin:0">Se cierra la sesión en tus otros dispositivos y te avisamos por correo.</p>
+        <div class="msg err" id="cc-err" role="alert" hidden></div>
+      </form>
+    </div>
+  </section>
+
   <!-- ============ RESUMEN MENSUAL ============ -->
   <section id="v-resumen" hidden>
     <a class="back" href="#viajes">← Volver a viajes</a>
@@ -445,7 +548,10 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
   var $ = function(id){ return document.getElementById(id); };
   var NUMS = ["toneladas","precio_tn","pct_chofer","precio_gasoil","litros","km","otros_gastos"];
   var TEXTS = ["fecha","factura_nro","cliente","detalle","remito","notas"];
-  var DEF_KEY = "cf-defaults-v1", DRAFT_KEY = "cf-borrador-v1";
+  var usuarioActual = "";
+  function DEF_KEY(){ return "cf-defaults-v2:"+usuarioActual; }
+  function DRAFT_KEY(){ return "cf-borrador-v2:"+usuarioActual; }
+  try{ localStorage.removeItem("cf-borrador-v1"); localStorage.removeItem("cf-defaults-v1"); }catch(e){}
   function extraVacio(){ return { cliente_cuit:"", cae:"", factura_archivo:"", factura_nombre:"", remitos:[] }; }
   var extra = extraVacio();   // datos de la factura que no se muestran en pantalla
   var viajesCache = null;
@@ -471,7 +577,7 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
   /* ---------- API ---------- */
   function api(path, opts){
     return fetch(path, Object.assign({credentials:"same-origin"}, opts||{})).then(function(r){
-      if(r.status===401 && path!=="/api/login"){ showLogin(); throw new Error("Ingresá la clave para continuar."); }
+      if(r.status===401 && !/^\/api\/(login|registro|recuperar)/.test(path)){ showLogin(); throw new Error("Tu sesión terminó. Ingresá de nuevo."); }
       return r.json().catch(function(){ return {}; }).then(function(d){
         if(!r.ok) throw new Error(d.detail && typeof d.detail==="string" ? d.detail : "Algo salió mal. Probá de nuevo.");
         return d;
@@ -533,15 +639,16 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
   }
 
   function guardarBorrador(){
+    if(!usuarioActual) return;   // el borrador es de cada usuario
     try{
       var d={extra:extra}; NUMS.concat(TEXTS).forEach(function(id){ d[id]=$(id).value; });
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
-      localStorage.setItem(DEF_KEY, JSON.stringify({pct_chofer:$("pct_chofer").value, precio_gasoil:$("precio_gasoil").value}));
+      localStorage.setItem(DRAFT_KEY(), JSON.stringify(d));
+      localStorage.setItem(DEF_KEY(), JSON.stringify({pct_chofer:$("pct_chofer").value, precio_gasoil:$("precio_gasoil").value}));
     }catch(e){}
   }
   function defaults(){
     var d={pct_chofer:"18", precio_gasoil:"2.300"};
-    try{ var s=JSON.parse(localStorage.getItem(DEF_KEY)||"null"); if(s){ if(s.pct_chofer) d.pct_chofer=s.pct_chofer; if(s.precio_gasoil) d.precio_gasoil=s.precio_gasoil; } }catch(e){}
+    try{ var s=JSON.parse(localStorage.getItem(DEF_KEY())||"null"); if(s){ if(s.pct_chofer) d.pct_chofer=s.pct_chofer; if(s.precio_gasoil) d.precio_gasoil=s.precio_gasoil; } }catch(e){}
     return d;
   }
   function limpiar(){
@@ -586,7 +693,7 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
   }
 
   /* ---------- Remitos (fotos) ---------- */
-  function urlRemito(n){ return "/api/remitos/archivo/"+encodeURIComponent(n); }
+  function urlRemito(n){ return "/api/archivos/"+String(n).split("/").map(encodeURIComponent).join("/"); }
   function thumbHtml(r, quitarAttr){
     var inner = r.tipo==="pdf" || !r.miniatura ? '<span class="pdfbox">PDF</span>' : '<img src="'+urlRemito(r.miniatura)+'" alt="Foto de remito" loading="lazy">';
     return '<div class="thumb"><a href="'+urlRemito(r.archivo)+'" target="_blank" rel="noopener" style="display:block;height:100%">'+inner+'</a>'+
@@ -985,27 +1092,169 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
   /* ---------- Navegación ---------- */
   function route(){
     var h=location.hash.replace(/^#/,""), m=h.match(/^viaje\/(\d+)$/), rm=h.match(/^resumen(?:\/(\d{4}-\d{2}))?$/);
-    var vista = m ? "detalle" : rm ? "resumen" : (h==="viajes" ? "viajes" : "calc");
+    var vista = m ? "detalle" : rm ? "resumen" : h==="cuenta" ? "cuenta" : (h==="viajes" ? "viajes" : "calc");
     $("v-resumen").hidden = vista!=="resumen";
+    $("v-cuenta").hidden = vista!=="cuenta";
+    $("tab-cuenta").setAttribute("aria-current", vista==="cuenta"?"page":"false");
     $("v-calc").hidden = vista!=="calc";
     $("v-viajes").hidden = vista!=="viajes";
     $("v-detalle").hidden = vista!=="detalle";
     $("tab-calc").setAttribute("aria-current", vista==="calc"?"page":"false");
-    $("tab-viajes").setAttribute("aria-current", vista!=="calc"?"page":"false");
+    $("tab-viajes").setAttribute("aria-current", (vista!=="calc" && vista!=="cuenta")?"page":"false");
     if(vista==="viajes") renderViajes();
     if(vista==="detalle") renderDetalle(m[1]);
     if(vista==="resumen") renderResumen(rm[1]);
+    if(vista==="cuenta") renderCuenta();
     if(vista!=="calc") window.scrollTo(0,0);
   }
 
-  /* ---------- Login ---------- */
-  function showLogin(){ $("v-main").hidden=true; $("v-login").hidden=false; $("login-clave").focus(); }
-  function showMain(){ $("v-login").hidden=true; $("v-main").hidden=false; route(); actualizarContador(); }
-  $("login-form").addEventListener("submit",function(e){
-    e.preventDefault();
-    var err=$("login-err"); err.hidden=true;
-    api("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({clave:$("login-clave").value})})
-      .then(showMain).catch(function(e){ err.textContent=e.message; err.hidden=false; });
+  /* ---------- Acceso: ingresar, crear cuenta, recuperar ---------- */
+  var FORMS=["f-ingresar","f-crear","f-recuperar","f-codigo"], recUsuario="";
+  function modo(id){
+    FORMS.forEach(function(f){ $(f).hidden = f!==id; });
+    $("t-ingresar").setAttribute("aria-current", id==="f-ingresar"?"page":"false");
+    $("t-crear").setAttribute("aria-current", id==="f-crear"?"page":"false");
+    $("auth-err").hidden=true; $("auth-ok").hidden=true;
+    var primero=$(id).querySelector("input:not([hidden])"); if(primero) setTimeout(function(){ primero.focus(); },0);
+  }
+  function authErr(t){ var e=$("auth-err"); e.textContent=t; e.hidden=false; $("auth-ok").hidden=true; }
+  function authOk(t){ var e=$("auth-ok"); e.textContent=t; e.hidden=false; $("auth-err").hidden=true; }
+  function postJSON(url, body){ return api(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}); }
+  function ocupado(form, si){ var b=form.querySelector("button[type=submit]"); b.disabled=si; if(si){ b.dataset.t=b.textContent; b.textContent="Un momento…"; } else if(b.dataset.t){ b.textContent=b.dataset.t; } }
+
+  // Fuerza de la contraseña (orientativa; la regla real la aplica el servidor)
+  function fuerza(pw){
+    if(!pw) return 0;
+    var n=0; if(pw.length>=8) n++; if(pw.length>=12) n++;
+    if(/[a-z]/i.test(pw) && /\d/.test(pw)) n++; if(/[^a-z0-9]/i.test(pw) || /[A-Z].*[a-z]|[a-z].*[A-Z]/.test(pw)) n++;
+    if(pw.length<8) n=Math.min(n,1);
+    return Math.max(1,Math.min(4,n));
+  }
+  function atarFuerza(input, barra, texto){
+    $(input).addEventListener("input",function(){
+      var n=fuerza(this.value); $(barra).dataset.n=n;
+      if(texto) $(texto).textContent = !this.value ? "Mínimo 8 caracteres. Mejor si mezclás palabras y números." :
+        this.value.length<8 ? "Te faltan "+(8-this.value.length)+" caracteres." : ["","Débil","Aceptable","Buena","Muy buena"][n];
+    });
+  }
+  atarFuerza("cr-clave","cr-fuerza","cr-fuerza-t"); atarFuerza("cc-nueva","cc-fuerza");
+  document.querySelectorAll(".pw .ver").forEach(function(b){
+    b.addEventListener("click",function(){ var i=b.previousElementSibling, ver=i.type==="password"; i.type=ver?"text":"password"; b.textContent=ver?"Ocultar":"Ver"; });
+  });
+
+  $("t-ingresar").addEventListener("click",function(e){ e.preventDefault(); modo("f-ingresar"); });
+  $("t-crear").addEventListener("click",function(e){ e.preventDefault(); modo("f-crear"); });
+  $("a-olvide").addEventListener("click",function(e){ e.preventDefault(); $("rc-usuario").value=$("in-usuario").value; modo("f-recuperar"); });
+  document.querySelectorAll(".volver-ingresar").forEach(function(a){ a.addEventListener("click",function(e){ e.preventDefault(); modo("f-ingresar"); }); });
+  $("a-reenviar").addEventListener("click",function(e){ e.preventDefault(); $("rc-usuario").value=recUsuario; modo("f-recuperar"); });
+
+  $("f-ingresar").addEventListener("submit",function(e){
+    e.preventDefault(); var f=this;
+    if(!$("in-usuario").value.trim() || !$("in-clave").value){ authErr("Completá usuario y contraseña."); return; }
+    ocupado(f,true);
+    postJSON("/api/login",{usuario:$("in-usuario").value.trim(), clave:$("in-clave").value})
+      .then(function(u){ $("in-clave").value=""; showMain(u); })
+      .catch(function(err){ authErr(err.message); $("in-clave").select(); })
+      .finally(function(){ ocupado(f,false); });
+  });
+
+  $("f-crear").addEventListener("submit",function(e){
+    e.preventDefault(); var f=this;
+    if($("cr-clave").value!==$("cr-clave2").value){ authErr("Las contraseñas no coinciden."); $("cr-clave2").focus(); return; }
+    if($("cr-clave").value.length<8){ authErr("La contraseña tiene que tener al menos 8 caracteres."); return; }
+    ocupado(f,true);
+    postJSON("/api/registro",{usuario:$("cr-usuario").value.trim(), correo:$("cr-correo").value.trim(),
+      clave:$("cr-clave").value, codigo_invitacion:$("cr-inv").value.trim()})
+      .then(function(u){ ["cr-clave","cr-clave2","cr-inv"].forEach(function(i){ $(i).value=""; }); showMain(u); toast("Cuenta creada. ¡Bienvenido, "+esc(u.usuario)+"!"); })
+      .catch(function(err){ authErr(err.message); })
+      .finally(function(){ ocupado(f,false); });
+  });
+
+  $("f-recuperar").addEventListener("submit",function(e){
+    e.preventDefault(); var f=this; recUsuario=$("rc-usuario").value.trim();
+    if(!recUsuario){ authErr("Escribí tu usuario o correo."); return; }
+    ocupado(f,true);
+    postJSON("/api/recuperar",{usuario:recUsuario})
+      .then(function(r){ modo("f-codigo"); $("rc-msg").textContent=r.mensaje; })
+      .catch(function(err){ authErr(err.message); })
+      .finally(function(){ ocupado(f,false); });
+  });
+
+  $("f-codigo").addEventListener("submit",function(e){
+    e.preventDefault(); var f=this;
+    if($("rc-clave").value!==$("rc-clave2").value){ authErr("Las contraseñas no coinciden."); return; }
+    ocupado(f,true);
+    postJSON("/api/recuperar/confirmar",{usuario:recUsuario, codigo:$("rc-codigo").value, clave_nueva:$("rc-clave").value})
+      .then(function(u){ ["rc-codigo","rc-clave","rc-clave2"].forEach(function(i){ $(i).value=""; }); showMain(u); toast("Contraseña cambiada. Se cerró la sesión en los otros dispositivos."); })
+      .catch(function(err){ authErr(err.message); })
+      .finally(function(){ ocupado(f,false); });
+  });
+
+  function showLogin(estado){
+    $("v-main").hidden=true; $("v-login").hidden=false;
+    if(estado && !estado.registro_abierto){ $("t-crear").hidden=true; }
+    if($("f-ingresar").hidden && $("f-crear").hidden && $("f-recuperar").hidden && $("f-codigo").hidden) modo("f-ingresar");
+  }
+
+  function cargarBorrador(){
+    var ok=false;
+    try{
+      var d=JSON.parse(localStorage.getItem(DRAFT_KEY())||"null");
+      if(d){ NUMS.concat(TEXTS).forEach(function(id){ if(typeof d[id]==="string") $(id).value=d[id]; });
+        extra=Object.assign(extraVacio(), d.extra||{}); if(!Array.isArray(extra.remitos)) extra.remitos=[]; ok=true; }
+    }catch(e){}
+    if(!ok) limpiar(); else { render(); renderRemitosCalc(); }
+  }
+
+  function showMain(u){
+    var cambio = usuarioActual && usuarioActual!==u.usuario;
+    usuarioActual=u.usuario; viajesCache=null; resumenActual=null;
+    $("cuenta-nombre").textContent=u.usuario; $("avatar").textContent=u.usuario.charAt(0);
+    $("cc-user").value=u.usuario;
+    $("v-login").hidden=true; $("v-main").hidden=false;
+    if(cambio || !$("v-main").dataset.listo){ cargarBorrador(); $("v-main").dataset.listo="1"; }
+    route(); actualizarContador();
+  }
+
+  /* ---------- Mi cuenta ---------- */
+  function fechaHora(iso){ if(!iso) return "—"; var d=new Date(/[zZ]$|[+-]\d\d:?\d\d$/.test(iso)?iso:iso+"Z"); /* el servidor guarda en UTC */ return isNaN(d)?"—":d.toLocaleString("es-AR",{dateStyle:"short",timeStyle:"short"}); }
+  function tam(b){ return b>1048576 ? fN.format(b/1048576)+" MB" : fN.format(b/1024)+" KB"; }
+  function renderCuenta(){
+    api("/api/cuenta").then(function(c){
+      $("cuenta-datos").innerHTML='<dl class="kv">'+
+        '<dt>Usuario</dt><dd class="txt">'+esc(c.usuario)+'</dd>'+
+        '<dt>Correo</dt><dd class="txt">'+esc(c.correo)+'</dd>'+
+        '<dt>Cuenta creada</dt><dd class="txt">'+fechaHora(c.creado)+'</dd>'+
+        '<dt>Último ingreso</dt><dd class="txt">'+fechaHora(c.ultimo_ingreso)+'</dd>'+
+        '<dt>Contraseña cambiada</dt><dd class="txt">'+(c.clave_cambiada?fechaHora(c.clave_cambiada):"Nunca")+'</dd>'+
+        '<dt>Viajes guardados</dt><dd>'+c.viajes+'</dd>'+
+        '<dt>Archivos</dt><dd>'+c.archivos+' · '+tam(c.bytes)+'</dd>'+
+        '<dt>Carpeta en el servidor</dt><dd class="mono">'+esc(c.carpeta)+'</dd></dl>';
+      $("cuenta-ses").textContent = c.sesiones===1 ? "Tenés la sesión abierta solo en este dispositivo." :
+        "Tenés la sesión abierta en "+c.sesiones+" dispositivos (contando este).";
+      $("btn-cerrar-otras").hidden = c.sesiones<=1;
+    }).catch(function(e){ $("cuenta-datos").innerHTML='<p class="hint">'+esc(e.message)+'</p>'; });
+  }
+  $("f-clave").addEventListener("submit",function(e){
+    e.preventDefault(); var f=this, err=$("cc-err"); err.hidden=true;
+    if($("cc-nueva").value!==$("cc-nueva2").value){ err.textContent="Las contraseñas nuevas no coinciden."; err.hidden=false; return; }
+    ocupado(f,true);
+    postJSON("/api/cuenta/clave",{actual:$("cc-actual").value, nueva:$("cc-nueva").value})
+      .then(function(r){ f.reset(); $("cc-fuerza").dataset.n=0; $("cc-user").value=usuarioActual;
+        toast("Contraseña cambiada"+(r.sesiones_cerradas?" · se cerró la sesión en "+r.sesiones_cerradas+" dispositivo(s)":"")+"."); renderCuenta(); })
+      .catch(function(x){ err.textContent=x.message; err.hidden=false; })
+      .finally(function(){ ocupado(f,false); });
+  });
+  $("btn-cerrar-otras").addEventListener("click",function(){
+    postJSON("/api/cuenta/cerrar-sesiones",{}).then(function(r){ toast("Se cerró la sesión en "+r.sesiones_cerradas+" dispositivo(s)."); renderCuenta(); })
+      .catch(function(x){ toast(esc(x.message)); });
+  });
+  $("btn-salir").addEventListener("click",function(){
+    try{ localStorage.removeItem(DRAFT_KEY()); }catch(e){}   // en una compu compartida no queda nada cargado
+    postJSON("/api/logout",{}).catch(function(){}).finally(function(){
+      usuarioActual=""; viajesCache=null; resumenActual=null; delete $("v-main").dataset.listo;
+      $("tab-count").textContent=""; location.hash="#calculadora"; showLogin(); modo("f-ingresar");
+    });
   });
 
   /* ---------- Inicio ---------- */
@@ -1019,16 +1268,8 @@ a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
   $("btn-limpiar").addEventListener("click",limpiar);
   window.addEventListener("hashchange",route);
 
-  // Recuperar lo que se estaba cargando (borrador) o empezar limpio
-  var restored=false;
-  try{
-    var d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");
-    if(d){ NUMS.concat(TEXTS).forEach(function(id){ if(typeof d[id]==="string") $(id).value=d[id]; }); if(d.extra){ extra=Object.assign(extraVacio(), d.extra); if(!Array.isArray(extra.remitos)) extra.remitos=[]; } restored=true; }
-  }catch(e){}
-  if(!restored) limpiar(); else { render(); renderRemitosCalc(); }
-
-  api("/api/estado").then(function(s){ if(s.requiere_clave && !s.autenticado) showLogin(); else showMain(); })
-    .catch(function(){ showMain(); });
+  api("/api/estado").then(function(s){ if(s.autenticado) showMain(s); else showLogin(s); })
+    .catch(function(){ showLogin(); authErr("No se pudo conectar con el servidor. Probá recargar la página."); });
 })();
 </script>
 </body>

@@ -243,6 +243,20 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
 .remst.err{color:var(--neg)}
 .fotos{font:500 10px var(--mono);color:var(--c-chofer);border:1px solid var(--c-chofer);border-radius:3px;padding:0 3px;margin-right:2px}
 
+/* Documentos del viaje */
+.docs{margin-top:16px}
+.docgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.doc{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--field);
+  color:var(--ink);text-decoration:none;min-width:0}
+.doc svg{flex:none;color:var(--accent)}
+.doc span{min-width:0}
+.doc b{display:block;font-weight:500}
+.doc small{display:block;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+a.doc:hover{border-color:var(--accent);background:var(--accent-soft)}
+.doc.off{opacity:.6}
+.doc.off svg{color:var(--muted)}
+@media (max-width:480px){.docgrid{grid-template-columns:1fr 1fr}.doc{padding:10px;gap:8px}}
+
 /* Login y avisos */
 .login{max-width:360px;margin:12vh auto 0}
 .login h1{margin-bottom:6px}
@@ -611,6 +625,28 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
       function(t,err){ st.textContent=t; st.classList.toggle("err",!!err); });
   });
 
+
+  /* Botones al final del detalle para abrir la factura y cada remito */
+  function docsHtml(v){
+    var btns=[];
+    if(v.factura_archivo){
+      btns.push('<a class="doc" href="/api/viajes/'+v.id+'/factura" target="_blank" rel="noopener">'+'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>'+'<span><b>Ver factura</b><small>'+esc(v.factura_nro||v.factura_nombre||"PDF")+'</small></span></a>');
+    }else{
+      btns.push('<div class="doc off">'+'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>'+'<span><b>Factura</b><small>No cargada</small></span></div>');
+    }
+    if(v.remitos.length){
+      v.remitos.forEach(function(r,i){
+        var t = v.remitos.length===1 ? "Ver remito" : "Ver remito "+(i+1);
+        btns.push('<a class="doc" href="'+urlRemito(r.archivo)+'" target="_blank" rel="noopener">'+(r.tipo==="pdf"?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/></svg>')+'<span><b>'+t+'</b><small>'+(r.tipo==="pdf"?"PDF":"Foto")+(r.creado?" · "+fecha(r.creado):"")+'</small></span></a>');
+      });
+    }else{
+      btns.push('<div class="doc off">'+'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/></svg>'+'<span><b>Remito</b><small>Sin fotos</small></span></div>');
+    }
+    var falta = !v.factura_archivo || !v.remitos.length;
+    return '<div class="panel docs"><p class="label-sm">Documentos del viaje</p><div class="docgrid">'+btns.join("")+'</div>'+
+      (falta?'<p class="hint" style="margin:10px 0 0">Podés agregar lo que falta desde los paneles Factura y Remitos de arriba.</p>':'')+'</div>';
+  }
+
   /* ---------- Guardar ---------- */
   function guardar(){
     var v=leer();
@@ -702,7 +738,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
           '<div class="panel"><p class="label-sm">Indicadores</p>'+kv([
             ["Margen",T?pct(v.ganancia/T):"—"],["Ganancia por tonelada",v.toneladas?money(v.ganancia/v.toneladas):"—"],["Gasoil por tonelada",v.toneladas?money(v.costo_gasoil/v.toneladas):"—"],
             ["Consumo",km?fN.format(v.litros/v.km*100)+" L/100km":"—"],["Costo por km",km?money(v.total_gastos/v.km):"—"],["Ganancia por km",km?money(v.ganancia/v.km):"—"]])+'</div>'+
-        '</div></div>';
+        '</div></div>'+docsHtml(v);
       $("rem-det").addEventListener("change",function(){
         var st=$("rem-det-st");
         subirFotos(this.files,"/api/viajes/"+v.id+"/remitos",function(){ viajesCache=null; renderDetalle(v.id); },

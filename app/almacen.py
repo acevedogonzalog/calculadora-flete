@@ -27,6 +27,9 @@ except Exception:  # pragma: no cover
 log = logging.getLogger("uvicorn.error")
 
 NOMBRE_VALIDO = re.compile(r"^[A-Za-z0-9._-]{1,140}\.(pdf|jpg)$")
+# Máximo de píxeles de una foto (una cámara de 108 MP entra). Más que eso se rechaza:
+# evita "bombas" de imágenes que al abrirse ocupan gigas de memoria.
+Image.MAX_IMAGE_PIXELS = 110_000_000
 FOTO_MAX_LADO = 2400   # px: suficiente para leer un remito, sin archivos gigantes
 MINI_LADO = 360
 
@@ -108,6 +111,8 @@ def guardar_remito(contenido: bytes) -> dict:
         return {"archivo": nombre, "miniatura": "", "tipo": "pdf"}
     try:
         img = Image.open(io.BytesIO(contenido))
+        if img.format == "JPEG":
+            img.draft("RGB", (FOTO_MAX_LADO, FOTO_MAX_LADO))  # decodifica ya reducida: mucha menos memoria
         img = ImageOps.exif_transpose(img).convert("RGB")
     except Exception as e:
         raise FormatoNoSoportado("El archivo no es una foto ni un PDF.") from e

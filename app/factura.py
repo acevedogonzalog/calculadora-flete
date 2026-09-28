@@ -39,7 +39,9 @@ def extraer_texto(pdf_bytes: bytes) -> str:
     with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
         if not pdf.pages:
             return ""
-        return pdf.pages[0].extract_text() or ""
+        texto = pdf.pages[0].extract_text() or ""
+    # Una factura real tiene ~2.000 caracteres; se corta para que un PDF armado no trabe las búsquedas
+    return "\n".join(linea[:400] for linea in texto[:20_000].splitlines())
 
 
 def parsear_texto(texto: str) -> dict[str, Any]:

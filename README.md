@@ -50,3 +50,20 @@ Sin `DATABASE_URL` guarda los viajes en el archivo `viajes.db`.
 ## Facturas
 
 El lector está pensado para la factura C que genera ARCA (Comprobantes en línea). Toma la primera página (ORIGINAL) y busca los datos por texto. Si la unidad está en kilos, la pasa a toneladas. Si algún dato no aparece, avisa en pantalla para completarlo a mano. No funciona con fotos o escaneos: hay que subir el PDF descargado de ARCA.
+
+## Seguridad
+
+- **Clave de acceso** (`APP_PASSWORD`): sin ella, cualquiera con la dirección puede ver y borrar viajes; la app lo avisa en los Deploy Logs. La sesión dura 90 días; si se cambia la clave se cierran todas las sesiones. Después de 8 intentos fallidos desde una misma conexión (o 40 en total) el ingreso se bloquea 15 minutos. Las sesiones abiertas no se ven afectadas.
+- **Archivos subidos**: solo PDF e imágenes, con tamaño máximo (10 MB facturas, 25 MB fotos). Las imágenes gigantes que buscan agotar la memoria se rechazan. Los nombres de archivo se validan, así que no se puede pedir un archivo fuera de `/data`.
+- **Datos**: los números tienen topes y no aceptan valores infinitos. Los textos que empiezan con `=` `+` `-` `@` se exportan a Excel como texto, nunca como fórmula.
+- **Cabeceras**: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy` y `Referrer-Policy`. La API responde con `Cache-Control: no-store`.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest                      # con SQLite
+TEST_DATABASE_URL=postgresql://usuario@host:5432/base_de_prueba pytest   # con PostgreSQL
+```
+
+Cubren el uso normal (factura, remitos, viajes, resumen y Excel), datos inválidos o extremos, archivos maliciosos, intentos de acceder a archivos fuera de la carpeta, inyección de fórmulas en Excel, cabeceras de seguridad y la clave de acceso.

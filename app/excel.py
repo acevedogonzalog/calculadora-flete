@@ -29,6 +29,13 @@ FILL_SEC = PatternFill("solid", fgColor=VERDE)
 FILL_RES = PatternFill("solid", fgColor="E3EFE9")
 
 
+def _texto_seguro(ws, celda):
+    """Un texto que empieza con = + - @ se guarda como texto, nunca como fórmula (inyección de fórmulas)."""
+    if isinstance(celda.value, str) and celda.value[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        celda.data_type = "s"
+    return celda
+
+
 def _fecha(v):
     return date.fromisoformat(v) if v else None
 
@@ -48,7 +55,7 @@ def excel_viaje(v: dict) -> bytes:
     fila = 2
 
     ws.merge_cells(start_row=fila, start_column=2, end_row=fila, end_column=3)
-    c = ws.cell(fila, 2, f"VIAJE Nº {v['id']} · {v.get('cliente') or 'Sin cliente'}")
+    c = _texto_seguro(ws, ws.cell(fila, 2, f"VIAJE Nº {v['id']} · {v.get('cliente') or 'Sin cliente'}"))
     c.font, c.fill = F_TIT, FILL_TIT
     c.alignment = Alignment(vertical="center", indent=1)
     ws.row_dimensions[fila].height = 28
@@ -65,7 +72,7 @@ def excel_viaje(v: dict) -> bytes:
     def linea(etq, valor, fmt=None, destacar=False):
         nonlocal fila
         a = ws.cell(fila, 2, etq)
-        b = ws.cell(fila, 3, valor)
+        b = _texto_seguro(ws, ws.cell(fila, 3, valor))
         a.font = F_BOLD if destacar else F_LBL
         b.font = F_BOLD if destacar else F_VAL
         a.border = b.border = BOX
@@ -123,7 +130,7 @@ def excel_viaje(v: dict) -> bytes:
         fila += 1
         seccion("NOTAS")
         ws.merge_cells(start_row=fila, start_column=2, end_row=fila, end_column=3)
-        c = ws.cell(fila, 2, v["notas"])
+        c = _texto_seguro(ws, ws.cell(fila, 2, v["notas"]))
         c.font = F_VAL
         c.alignment = Alignment(wrap_text=True, vertical="top", indent=1)
         ws.row_dimensions[fila].height = max(30, 15 * (1 + len(v["notas"]) // 60))
@@ -173,7 +180,7 @@ def _tabla_viajes(ws, lista: list[dict]) -> int:
                 val = _fecha(val)
             elif clave == "pct_chofer":
                 val = val / 100
-            c = ws.cell(r, col, val)
+            c = _texto_seguro(ws, ws.cell(r, col, val))
             c.font, c.border = F_VAL, BOX
             if fmt:
                 c.number_format = fmt

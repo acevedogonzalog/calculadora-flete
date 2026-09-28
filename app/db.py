@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import (
     Column, Date, DateTime, Float, Integer, MetaData, String, Table, Text,
-    create_engine, delete, insert, select,
+    create_engine, delete, insert, inspect, select, text, update,
 )
 
 
@@ -50,6 +50,9 @@ viajes = Table(
     Column("km", Float),
     Column("otros_gastos", Float, nullable=False, default=0),
     Column("notas", Text, default=""),
+    # Factura PDF guardada en /data/facturas
+    Column("factura_archivo", String(160), default=""),
+    Column("factura_nombre", String(200), default=""),
     # Resultados (se guardan como quedaron al momento de guardar)
     Column("total", Float, nullable=False, default=0),
     Column("pago_chofer", Float, nullable=False, default=0),
@@ -61,6 +64,17 @@ viajes = Table(
 
 def init_db() -> None:
     metadata.create_all(engine)
+    _migrar()
+
+
+def _migrar() -> None:
+    """Agrega columnas nuevas a una tabla que ya existía (sin borrar datos)."""
+    existentes = {c["name"] for c in inspect(engine).get_columns("viajes")}
+    with engine.begin() as con:
+        for col in viajes.columns:
+            if col.name not in existentes:
+                tipo = col.type.compile(dialect=engine.dialect)
+                con.execute(text(f'ALTER TABLE viajes ADD COLUMN {col.name} {tipo}'))
 
 
 def calcular(p: dict) -> dict:
@@ -102,6 +116,13 @@ def obtener(viaje_id: int) -> dict | None:
     with engine.connect() as con:
         r = con.execute(select(viajes).where(viajes.c.id == viaje_id)).first()
         return _fila(r) if r else None
+
+
+def asignar_factura(viaje_id: int, archivo: str, nombre: str) -> dict | None:
+    with engine.begin() as con:
+        con.execute(update(viajes).where(viajes.c.id == viaje_id)
+                    .values(factura_archivo=archivo, factura_nombre=nombre))
+    return obtener(viaje_id)
 
 
 def borrar(viaje_id: int) -> bool:

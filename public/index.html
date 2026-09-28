@@ -155,6 +155,7 @@ a:focus-visible,.btn:focus-visible,input:focus-visible,textarea:focus-visible,.d
   .trip .num{white-space:nowrap}
   .m{display:inline;font:400 11px var(--body);color:var(--muted)}
 }
+.pdf{font:500 10px var(--mono);color:var(--accent);border:1px solid var(--accent);border-radius:3px;padding:0 3px;margin-right:2px}
 .empty{text-align:center;padding:40px 16px;color:var(--muted)}
 .empty p{margin:0 0 14px}
 
@@ -218,6 +219,12 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
 .tip .tr.tot{border-top:1px solid var(--line);margin-top:4px;padding-top:4px}
 .tip a{display:inline-block;margin-top:6px;color:var(--accent);font-weight:500}
 .chartnote{font-size:12px;color:var(--muted);margin:6px 0 0}
+
+/* Factura guardada */
+.facbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.facbox span{flex:1 1 180px;font-size:13px;min-width:0;overflow-wrap:anywhere}
+.facok{color:var(--accent)} .facno{color:var(--muted)}
+.facbox .btn{padding:7px 12px;font-size:13px}
 
 /* Login y avisos */
 .login{max-width:360px;margin:12vh auto 0}
@@ -397,7 +404,8 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
   var NUMS = ["toneladas","precio_tn","pct_chofer","precio_gasoil","litros","km","otros_gastos"];
   var TEXTS = ["fecha","factura_nro","cliente","detalle","remito","notas"];
   var DEF_KEY = "cf-defaults-v1", DRAFT_KEY = "cf-borrador-v1";
-  var extra = { cliente_cuit:"", cae:"" };   // datos de la factura que no se muestran en pantalla
+  var EXTRA0 = { cliente_cuit:"", cae:"", factura_archivo:"", factura_nombre:"" };
+  var extra = Object.assign({}, EXTRA0);   // datos de la factura que no se muestran en pantalla
   var viajesCache = null;
 
   /* ---------- Formatos ---------- */
@@ -499,7 +507,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     NUMS.concat(TEXTS).forEach(function(id){ $(id).value=""; });
     $("pct_chofer").value=d.pct_chofer; $("precio_gasoil").value=d.precio_gasoil; $("otros_gastos").value="0";
     $("fecha").value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
-    extra={cliente_cuit:"",cae:""};
+    extra=Object.assign({}, EXTRA0);
     $("pdf-msg").hidden=true; $("drop-t").textContent="Subir factura PDF";
     render();
   }
@@ -518,7 +526,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
       ["factura_nro","cliente","detalle","remito"].forEach(function(k){ if(d[k]) $(k).value=d[k]; });
       if(d.toneladas!=null) $("toneladas").value=toInput(d.toneladas);
       if(d.precio_tn!=null) $("precio_tn").value=toInput(d.precio_tn);
-      extra={cliente_cuit:d.cliente_cuit||"", cae:d.cae||""};
+      extra={cliente_cuit:d.cliente_cuit||"", cae:d.cae||"", factura_archivo:d.factura_archivo||"", factura_nombre:d.factura_nombre||""};
       $("drop-t").textContent="Factura "+(d.factura_nro||file.name);
       var av=d.avisos||[];
       if(av.length){
@@ -526,7 +534,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
         msg.innerHTML="Se cargaron los datos, pero revisá:<ul>"+av.map(function(a){return "<li>"+esc(a)+"</li>";}).join("")+"</ul>";
       }else{
         msg.className="msg ok";
-        msg.textContent="Datos cargados: "+fN.format(d.toneladas)+" tn a "+money(d.precio_tn)+" · total "+money(d.importe_total||0)+". Completá litros y km del viaje.";
+        msg.textContent="Datos cargados: "+fN.format(d.toneladas)+" tn a "+money(d.precio_tn)+" · total "+money(d.importe_total||0)+". Completá litros y km del viaje."+(d.factura_archivo?" El PDF queda guardado con el viaje.":"");
       }
       msg.hidden=false; render();
     }).catch(function(e){
@@ -543,7 +551,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
     var body={
       fecha:$("fecha").value||null, factura_nro:$("factura_nro").value.trim(), cliente:$("cliente").value.trim(),
       detalle:$("detalle").value.trim(), remito:$("remito").value.trim(), notas:$("notas").value.trim(),
-      cliente_cuit:extra.cliente_cuit, cae:extra.cae,
+      cliente_cuit:extra.cliente_cuit, cae:extra.cae, factura_archivo:extra.factura_archivo||"", factura_nombre:extra.factura_nombre||"",
       toneladas:v.toneladas, precio_tn:v.precio_tn, pct_chofer:v.pct_chofer, precio_gasoil:v.precio_gasoil,
       litros:v.litros, km:v.km, otros_gastos:v.otros_gastos
     };
@@ -579,7 +587,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
         l.map(function(v){
           return '<a class="trip" href="#viaje/'+v.id+'">'+
             '<span class="date">'+fecha(v.fecha)+'</span>'+
-            '<span class="who"><b>'+esc(v.cliente||"Sin cliente")+'</b><small>'+esc(v.detalle||v.factura_nro||"")+'</small></span>'+
+            '<span class="who"><b>'+esc(v.cliente||"Sin cliente")+'</b><small>'+(v.factura_archivo?'<span class="pdf">PDF</span> ':'')+esc(v.detalle||v.factura_nro||"")+'</small></span>'+
             '<span class="num tn">'+fN.format(v.toneladas)+' tn</span>'+
             '<span class="num tot">'+money(v.total)+'</span>'+
             '<span class="num '+(v.ganancia<0?"neg":"gan")+'"><span class="m">Ganancia </span>'+money(v.ganancia)+'</span>'+
@@ -597,12 +605,17 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
       var base=Math.max(T,v.total_gastos)||1;
       body.innerHTML=
         '<div class="dhead"><div><h2>'+esc(v.cliente||"Sin cliente")+'</h2><p>'+fecha(v.fecha)+(v.factura_nro?' · Factura '+esc(v.factura_nro):'')+' · Viaje Nº '+v.id+'</p></div>'+
-        '<div class="actions"><a class="btn primary" href="/api/viajes/'+v.id+'/excel">Exportar a Excel</a>'+
+        '<div class="actions">'+(v.factura_archivo?'<a class="btn" href="/api/viajes/'+v.id+'/factura" target="_blank" rel="noopener">Ver factura</a>':'')+'<a class="btn primary" href="/api/viajes/'+v.id+'/excel">Exportar a Excel</a>'+
         '<button class="btn danger" type="button" id="btn-borrar">Eliminar</button></div></div>'+
         '<div class="detail"><div class="stack">'+
           '<div class="panel"><p class="label-sm">Factura</p>'+kv([
             ["Fecha",fecha(v.fecha),1],["Nº de factura",esc(v.factura_nro||"—"),1],["Cliente",esc(v.cliente||"—"),1],
-            ["CUIT cliente",esc(v.cliente_cuit||"—"),1],["Detalle",esc(v.detalle||"—"),1],["Remito",esc(v.remito||"—"),1],["CAE",esc(v.cae||"—"),1]])+'</div>'+
+            ["CUIT cliente",esc(v.cliente_cuit||"—"),1],["Detalle",esc(v.detalle||"—"),1],["Remito",esc(v.remito||"—"),1],["CAE",esc(v.cae||"—"),1]])+
+            '<div class="facbox">'+(v.factura_archivo
+              ? '<span class="facok">PDF guardado'+(v.factura_nombre?': '+esc(v.factura_nombre):'')+'</span><a class="btn" href="/api/viajes/'+v.id+'/factura" target="_blank" rel="noopener">Ver factura</a>'
+              : '<span class="facno">Este viaje no tiene la factura guardada.</span>')+
+            '<label class="btn" for="fac-up">'+(v.factura_archivo?'Reemplazar PDF':'Adjuntar factura PDF')+'</label><input type="file" id="fac-up" accept="application/pdf,.pdf" hidden></div>'+
+          '</div>'+
           '<div class="panel"><p class="label-sm">Datos del viaje</p>'+kv([
             ["Toneladas",fN.format(v.toneladas)+" tn"],["Precio por tonelada",money(v.precio_tn)],["Porcentaje chofer",fP.format(v.pct_chofer)+" %"],
             ["Precio gasoil",money(v.precio_gasoil)+" /L"],["Gasoil consumido",fN.format(v.litros)+" L"],["Kilómetros",km?fN.format(v.km)+" km":"—"],["Otros gastos",money(v.otros_gastos)]])+'</div>'+
@@ -617,6 +630,14 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
             ["Margen",T?pct(v.ganancia/T):"—"],["Ganancia por tonelada",v.toneladas?money(v.ganancia/v.toneladas):"—"],["Gasoil por tonelada",v.toneladas?money(v.costo_gasoil/v.toneladas):"—"],
             ["Consumo",km?fN.format(v.litros/v.km*100)+" L/100km":"—"],["Costo por km",km?money(v.total_gastos/v.km):"—"],["Ganancia por km",km?money(v.ganancia/v.km):"—"]])+'</div>'+
         '</div></div>';
+      $("fac-up").addEventListener("change",function(){
+        var f=this.files[0]; if(!f) return;
+        var fd=new FormData(); fd.append("archivo",f);
+        toast("Subiendo factura…");
+        api("/api/viajes/"+v.id+"/factura",{method:"POST",body:fd})
+          .then(function(){ toast("Factura guardada."); renderDetalle(v.id); })
+          .catch(function(e){ toast(esc(e.message)); });
+      });
       var bb=$("btn-borrar"), armado=false, t;
       bb.addEventListener("click",function(){
         if(!armado){ armado=true; bb.classList.add("confirm"); bb.textContent="Tocá de nuevo para eliminar";
@@ -878,7 +899,7 @@ dl.kv > :nth-last-child(-n+2){border-bottom:0}
   var restored=false;
   try{
     var d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null");
-    if(d){ NUMS.concat(TEXTS).forEach(function(id){ if(typeof d[id]==="string") $(id).value=d[id]; }); if(d.extra) extra=d.extra; restored=true; }
+    if(d){ NUMS.concat(TEXTS).forEach(function(id){ if(typeof d[id]==="string") $(id).value=d[id]; }); if(d.extra) extra=Object.assign({}, EXTRA0, d.extra); restored=true; }
   }catch(e){}
   if(!restored) limpiar(); else render();
 

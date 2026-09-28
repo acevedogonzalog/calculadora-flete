@@ -13,7 +13,7 @@ from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
-from . import db
+from . import almacen, db
 from .excel import excel_resumen, excel_todos, excel_viaje
 from .factura import leer_factura
 from .resumen import resumen
@@ -42,6 +42,7 @@ app = FastAPI(title="Calculadora de Flete", docs_url=None, redoc_url=None)
 @app.on_event("startup")
 def _inicio() -> None:
     db.init_db()
+    almacen.iniciar()
 
 
 @app.middleware("http")
@@ -78,17 +79,33 @@ async def login(datos: Login, request: Request):
 
 # ---------- Factura ----------
 
-@app.post("/api/factura")
-async def subir_factura(archivo: UploadFile = File(...)):
+async def _leer_pdf(archivo: UploadFile) -> bytes:
     contenido = await archivo.read(MAX_PDF + 1)
     if len(contenido) > MAX_PDF:
         raise HTTPException(413, "El archivo supera los 10 MB.")
     if not contenido.startswith(b"%PDF"):
         raise HTTPException(400, "El archivo no es un PDF. Subí la factura descargada de ARCA.")
+    return contenido
+
+
+def _nombre_original(archivo: UploadFile) -> str:
+    return Path(archivo.filename or "factura.pdf").name[:200]
+
+
+@app.post("/api/factura")
+async def subir_factura(archivo: UploadFile = File(...)):
+    """Lee los datos de la factura y guarda el PDF en /data/facturas."""
+    contenido = await _leer_pdf(archivo)
     try:
-        return leer_factura(contenido)
+        datos = leer_factura(contenido)
     except Exception:
-        raise HTTPException(422, "No se pudo leer el PDF. Probá descargar la factura de nuevo desde ARCA.")
+        datos = {"avisos": ["No se pudieron leer los datos del PDF: cargalos a mano. El archivo igual se guarda."]}
+    try:
+        datos["factura_archivo"] = almacen.guardar(contenido, datos.get("fecha", ""), datos.get("factura_nro", ""))
+        datos["factura_nombre"] = _nombre_original(archivo)
+    except OSError:
+        datos.setdefault("avisos", []).append("No se pudo guardar el PDF en el servidor. Los datos sí se cargaron.")
+    return datos
 
 
 # ---------- Viajes ----------
@@ -109,6 +126,8 @@ class ViajeIn(BaseModel):
     km: float | None = Field(None, ge=0)
     otros_gastos: float = Field(0, ge=0)
     notas: str = Field("", max_length=2000)
+    factura_archivo: str = Field("", max_length=160)
+    factura_nombre: str = Field("", max_length=200)
 
 
 @app.get("/api/viajes")
@@ -120,7 +139,10 @@ def listar_viajes():
 def guardar_viaje(v: ViajeIn):
     if v.toneladas <= 0 or v.precio_tn <= 0:
         raise HTTPException(400, "Cargá las toneladas y el precio por tonelada antes de guardar.")
-    return db.crear(v.model_dump())
+    datos = v.model_dump()
+    if datos["factura_archivo"] and not almacen.ruta(datos["factura_archivo"]):
+        datos["factura_archivo"] = datos["factura_nombre"] = ""   # referencia inválida: se ignora
+    return db.crear(datos)
 
 
 @app.get("/api/viajes/excel")
@@ -163,6 +185,33 @@ def borrar_viaje(viaje_id: int):
     if not db.borrar(viaje_id):
         raise HTTPException(404, "Ese viaje no existe.")
     return {"ok": True}
+
+
+@app.get("/api/viajes/{viaje_id}/factura")
+def ver_factura(viaje_id: int):
+    v = db.obtener(viaje_id)
+    if not v:
+        raise HTTPException(404, "Ese viaje no existe.")
+    p = almacen.ruta(v.get("factura_archivo"))
+    if not p:
+        raise HTTPException(404, "Este viaje no tiene la factura guardada.")
+    nombre = re.sub(r'[^A-Za-z0-9._-]+', "-", v.get("factura_nombre") or p.name)
+    return FileResponse(p, media_type="application/pdf",
+                        headers={"Content-Disposition": f'inline; filename="{nombre}"'})
+
+
+@app.post("/api/viajes/{viaje_id}/factura")
+async def adjuntar_factura(viaje_id: int, archivo: UploadFile = File(...)):
+    """Adjunta (o reemplaza) la factura PDF de un viaje ya guardado."""
+    v = db.obtener(viaje_id)
+    if not v:
+        raise HTTPException(404, "Ese viaje no existe.")
+    contenido = await _leer_pdf(archivo)
+    try:
+        nombre = almacen.guardar(contenido, v.get("fecha") or "", v.get("factura_nro") or "")
+    except OSError:
+        raise HTTPException(500, "No se pudo guardar el PDF en el servidor.")
+    return db.asignar_factura(viaje_id, nombre, _nombre_original(archivo))
 
 
 @app.get("/api/viajes/{viaje_id}/excel")
